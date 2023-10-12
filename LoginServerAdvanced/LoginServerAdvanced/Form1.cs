@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.Pipelines;
 using Microsoft.Data.SqlClient;
+using LoginServerAdvanced;
 
 namespace LoginServerAdvanced
 {
@@ -36,6 +37,11 @@ namespace LoginServerAdvanced
                 {
                     LoginServerLogList.Items.Add(LogItemAddTime("서버를 시작합니다."));
                     LoginServerCore.InitLoginServer();
+                    LoginServerCore.InitDBServerConnect();
+                    LoginServerLogList.Items.Add(LogItemAddTime("DB연결 성공"));
+                    LoginServerCore.InitClientSocketServer();
+                    LoginServerLogList.Items.Add(LogItemAddTime("클라이언트 오픈 준비 완료"));
+                    LoginServerLogList.Items.Add(LogItemAddTime("서버오픈 완료"));
                 }
             }
         }
@@ -66,7 +72,7 @@ namespace LoginServerAdvanced
 
 class LoginCore
 {
-    private Dictionary<string, int> LoginUsers; // ID,랜덤값으로 유효성 검사
+    private Dictionary<string, int> LoginUsers; // <ID,랜덤값>으로 유효성 검사 ID만 딱 보내서 위조 로그인 하는것을 방지
     private Socket ListenSocket;
     private Socket GameServerSocket;
     private SqlConnection AccountDBConnect;
@@ -76,13 +82,12 @@ class LoginCore
     public void InitLoginServer()
     {
         IsServerRun = true;
-        InitClientSocketServer();
     }
     public bool IsServerOn()
     {
         return IsServerRun;
     }
-    private void InitClientSocketServer()
+    public void InitClientSocketServer()
     {
         ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         ListenSocket.Bind(new IPEndPoint(IPAddress.Any, 11220));
@@ -90,14 +95,24 @@ class LoginCore
         LoginPipeLines = new Pipe();
 
     }
-    private void InitGameSocketServerConnect()
+    public void InitGameSocketServerConnect()
     {
 
     }
-    private void InitDBServerConnect()
+    public void InitDBServerConnect()
     {
-
+        string SQLConnectString = string.Format("Server={0};Database={1};Integrated Security=SSPI;Encrypt=false;", "SMARTYOONG\\SQLEXPRESS", "AccountDB");
+        AccountDBConnect = new SqlConnection(SQLConnectString);
+        try
+        {
+            AccountDBConnect.Open();
+        }
+        catch(Exception ex) 
+        {
+            Console.WriteLine(ex.Message);
+        }
     }
+    // 사용법 연구중-----------------------------------------------------------------------------
     private async Task RunClientSocketServer()
     {
         while (true)
