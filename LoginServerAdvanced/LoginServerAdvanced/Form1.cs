@@ -16,6 +16,7 @@ using System.Windows.Forms;
 using System.IO.Pipelines;
 using Microsoft.Data.SqlClient;
 using LoginServerAdvanced;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace LoginServerAdvanced
 {
@@ -124,11 +125,9 @@ class LoginCore
 
             await Task.WhenAll(writing, reading);
 
-            clientSocket.Shutdown(SocketShutdown.Both);
-            clientSocket.Close();
         }
     }
-    private static async Task FillPipeAsync(Socket socket, PipeWriter writer)
+    private async Task FillPipeAsync(Socket socket, PipeWriter writer)
     {
         const int minimumBufferSize = 512;
 
@@ -142,33 +141,90 @@ class LoginCore
             {
                 break;
             }
+            try
+            {
+                writer.Advance(bytesRead);
+                FlushResult WriteResult = await writer.FlushAsync();
 
-            writer.Advance(bytesRead);
-            await writer.FlushAsync();
+                if (WriteResult.IsCompleted)
+                {
+                    break;
+                }
+            }
+            catch (Exception ex) 
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
-        writer.Complete();
+        await writer.CompleteAsync();
     }
-    private static async Task ReadPipeAsync(PipeReader reader)
+    private async Task ReadPipeAsync(PipeReader reader)
     {
         while (true)
         {
             ReadResult result = await reader.ReadAsync();
             ReadOnlySequence<byte> buffer = result.Buffer;
-
-            foreach (ReadOnlyMemory<byte> segment in buffer)
+            try
             {
-                // 데이터 처리
+                if (result.IsCanceled)
+                {
+                    break;
+                }
+                while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
+                {
+                    ProcessMessage(line);
+                }
+
+                reader.AdvanceTo(buffer.Start, buffer.End);
+
+                if (result.IsCompleted)
+                {
+                    break;
+                }
             }
-
-            reader.AdvanceTo(buffer.End);
-
-            if (result.IsCompleted)
+            catch(Exception ex) 
             {
-                break;
+                Console.WriteLine(ex.Message);
             }
         }
 
-        reader.Complete();
+        await reader.CompleteAsync();
+    }
+    // 여기부터 내가 커스터 마이징해야함
+    private bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
+    {
+        SequencePosition? position = buffer.PositionOf((byte)'\n');
+
+        if (position == null)
+        {
+            line = default;
+            return false;
+        }
+
+        line = buffer.Slice(0, position.Value);
+        buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
+        return true;
+    }
+
+    public void ShutDownServerCore()
+    {
+        //clientSocket.Shutdown(SocketShutdown.Both);
+        //clientSocket.Close();
+    }
+    public void Abort()
+    {
+        LoginPipeLines.Reader.CancelPendingRead();
+    }
+    // 여기도 커스터마이징 해야함
+    private void ProcessMessage(ReadOnlySequence<byte> ClientMessage)
+    {
+
     }
 }
+
+// 파이프 라인은 데이터를 연속적으로 읽어오고, 커널에서 자동으로 메모리 풀링등을 해주는 역할이다.
+// 즉, 나는 TryReadLine에서 먼저 메세지 Ident를 읽어오고, 각 변수에 맞게 라인을 조정한다.
+// 그리고 Queue에 집어 넣어서 나중에 스레드 풀을 통해서 그 메세지들을 처리하는 ProcessMessage 함수를 만들자
+// 데이터를 읽어오고, 버퍼에 저장하고, 메모리 관리는 PipeLines가 해준다.
+// 나는 읽어온 버퍼를 파싱하고, 큐에 넣어서 메세지 처리하는 것을 구현해야한다.
