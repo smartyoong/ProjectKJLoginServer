@@ -17,6 +17,7 @@ using System.IO.Pipelines;
 using Microsoft.Data.SqlClient;
 using LoginServerAdvanced;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Collections.Concurrent;
 
 namespace LoginServerAdvanced
 {
@@ -79,6 +80,7 @@ class LoginCore
     private SqlConnection AccountDBConnect;
     private Pipe LoginPipeLines;
     private bool IsServerRun = false;
+    private ConcurrentQueue<byte[]> LoginMessageQueue;
 
     public void InitLoginServer()
     {
@@ -90,6 +92,7 @@ class LoginCore
     }
     public void InitClientSocketServer()
     {
+        LoginMessageQueue = new ConcurrentQueue<byte[]>();
         ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         ListenSocket.Bind(new IPEndPoint(IPAddress.Any, 11220));
         ListenSocket.Listen(1000);
@@ -127,9 +130,11 @@ class LoginCore
 
         }
     }
+    //소켓에서 받은 데이터를 WritePipe를 통해 파이프라인에 쓴다, 어느 크기만큼 썼다는 것을 ReadPipe에게
+    //알려줘야한다.
     private async Task FillPipeAsync(Socket socket, PipeWriter writer)
     {
-        const int minimumBufferSize = 512;
+        const int minimumBufferSize = 1024;
 
         while (true)
         {
@@ -159,6 +164,9 @@ class LoginCore
 
         await writer.CompleteAsync();
     }
+    // WritePipe가 데이터를 썻다면 해당 함수가 발동된다
+    // 사용된 버퍼를 받고 나의 필요에 따라서 버퍼를 가공한다
+    // 마지막으로 읽어드린 버퍼를 되돌려준다
     private async Task ReadPipeAsync(PipeReader reader)
     {
         while (true)
@@ -171,10 +179,8 @@ class LoginCore
                 {
                     break;
                 }
-                while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
-                {
-                    ProcessMessage(line);
-                }
+
+                BufferToMessageQueue(ref buffer);
 
                 reader.AdvanceTo(buffer.Start, buffer.End);
 
@@ -191,20 +197,19 @@ class LoginCore
 
         await reader.CompleteAsync();
     }
-    // 여기부터 내가 커스터 마이징해야함
-    private bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
+    // 버퍼의 헤더를 읽고 해당 크기만큼 딱 데이터를 잘라서 메세지큐에 삽입한다
+    private void BufferToMessageQueue(ref ReadOnlySequence<byte> buffer)
     {
-        SequencePosition? position = buffer.PositionOf((byte)'\n');
 
-        if (position == null)
-        {
-            line = default;
-            return false;
-        }
+        // 헤더 읽기
+        int HeaderLength = sizeof(int);
+        SequencePosition Position = buffer.GetPosition(HeaderLength);
+        int Length = BitConverter.ToInt32(buffer.Slice(0, Position).ToArray());
 
-        line = buffer.Slice(0, position.Value);
-        buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
-        return true;
+        // 데이터 읽기
+        buffer = buffer.Slice(Position,Length);
+        byte[] ReceivedData = buffer.ToArray();
+        LoginMessageQueue.Enqueue( ReceivedData );
     }
 
     public void ShutDownServerCore()
@@ -216,15 +221,15 @@ class LoginCore
     {
         LoginPipeLines.Reader.CancelPendingRead();
     }
-    // 여기도 커스터마이징 해야함
-    private void ProcessMessage(ReadOnlySequence<byte> ClientMessage)
+    // 스레드풀에서 메세지를 처리하는 함수
+    private void ProcessMessage()
     {
 
     }
 }
 
-// 파이프 라인은 데이터를 연속적으로 읽어오고, 커널에서 자동으로 메모리 풀링등을 해주는 역할이다.
-// 즉, 나는 TryReadLine에서 먼저 메세지 Ident를 읽어오고, 각 변수에 맞게 라인을 조정한다.
+// 파이프 라인은 데이터를 연속적으로 읽어오고, 커널에서 자동으로 메모리 풀링등을 해주는 역할이다.(내부에선 스레드풀도 사용한다)
+// 즉, 나는 BufferToMessage에서 먼저 메세지길이를 파악해서 읽어오고
 // 그리고 Queue에 집어 넣어서 나중에 스레드 풀을 통해서 그 메세지들을 처리하는 ProcessMessage 함수를 만들자
 // 데이터를 읽어오고, 버퍼에 저장하고, 메모리 관리는 PipeLines가 해준다.
 // 나는 읽어온 버퍼를 파싱하고, 큐에 넣어서 메세지 처리하는 것을 구현해야한다.

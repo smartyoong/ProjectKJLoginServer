@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace LoginServerAdvanced
 {
-    enum LOGIN_CLIENT_PACKET_ID
+    public enum LOGIN_CLIENT_PACKET_ID : uint
     {
         LOGIN_CLIENT_TRY_LOGIN = 0,
     }
-    enum LOGIN_SERVER_PACKET_ID 
+    public enum LOGIN_SERVER_PACKET_ID  : uint
     {
         LOGIN_SERVER_LOGIN_RESULT = 0
     }
