@@ -18,16 +18,18 @@ using Microsoft.Data.SqlClient;
 using LoginServerAdvanced;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Collections.Concurrent;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text.Json;
 
 namespace LoginServerAdvanced
 {
     public partial class LoginServer : Form
     {
+        private LoginCore LoginServerCore = new LoginCore();
         public LoginServer()
         {
             InitializeComponent();
         }
-        private LoginCore LoginServerCore = new LoginCore();
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
             if (LoginServerCore.IsServerOn())
@@ -43,6 +45,8 @@ namespace LoginServerAdvanced
                     LoginServerLogList.Items.Add(LogItemAddTime("DB연결 성공"));
                     LoginServerCore.InitClientSocketServer();
                     LoginServerLogList.Items.Add(LogItemAddTime("클라이언트 오픈 준비 완료"));
+                    LoginServerCore.Run();
+                    LoginServerLogList.Items.Add(LogItemAddTime("서버 버퍼 시작"));
                     LoginServerLogList.Items.Add(LogItemAddTime("서버오픈 완료"));
                 }
             }
@@ -79,8 +83,9 @@ class LoginCore
     private Socket GameServerSocket;
     private SqlConnection AccountDBConnect;
     private Pipe LoginPipeLines;
+    private Pipe LoginSendPipeLines;
     private bool IsServerRun = false;
-    private ConcurrentQueue<byte[]> LoginMessageQueue;
+    private ConcurrentQueue<LoginMessagePacket> LoginMessageQueue;
 
     public void InitLoginServer()
     {
@@ -92,12 +97,12 @@ class LoginCore
     }
     public void InitClientSocketServer()
     {
-        LoginMessageQueue = new ConcurrentQueue<byte[]>();
+        LoginMessageQueue = new ConcurrentQueue<LoginMessagePacket>();
         ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         ListenSocket.Bind(new IPEndPoint(IPAddress.Any, 11220));
         ListenSocket.Listen(1000);
         LoginPipeLines = new Pipe();
-
+        LoginSendPipeLines = new Pipe();
     }
     public void InitGameSocketServerConnect()
     {
@@ -129,6 +134,21 @@ class LoginCore
             await Task.WhenAll(writing, reading);
 
         }
+    }
+    private async Task RunSendSocketServer()
+    {
+        while(true)
+        {
+            byte[] data = null; // 추후 바꿔야함
+            Task writing = FillSendPipeAsync(LoginSendPipeLines.Writer, data);
+            Task reading = ReadSendPipeAsync(LoginSendPipeLines.Reader, ListenSocket); // 이것도 바꿔야함
+            await Task.WhenAll(writing, reading); // 여기도 바꿔야함
+        }
+    }
+    public async Task Run()
+    {
+        await RunClientSocketServer();
+        await RunSendSocketServer();
     }
     //소켓에서 받은 데이터를 WritePipe를 통해 파이프라인에 쓴다, 어느 크기만큼 썼다는 것을 ReadPipe에게
     //알려줘야한다.
@@ -181,6 +201,7 @@ class LoginCore
                 }
 
                 BufferToMessageQueue(ref buffer);
+                ProcessMessage(); // 임시 테스트용
 
                 reader.AdvanceTo(buffer.Start, buffer.End);
 
@@ -197,19 +218,80 @@ class LoginCore
 
         await reader.CompleteAsync();
     }
+    private async Task FillSendPipeAsync(PipeWriter writer, byte[] data)
+    {
+        const int minimumBufferSize = 1024;
+        while (true) 
+        {
+            if(data.Length == 0)
+            {
+                break;
+            }
+            Memory<byte> memory = writer.GetMemory(minimumBufferSize);
+            try
+            {
+                data.CopyTo(memory.Span);
+                writer.Advance(data.Length);
+                FlushResult WriteResult = await writer.FlushAsync();
+
+                if (WriteResult.IsCompleted)
+                {
+                    break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+        }
+    }
+
+    private async Task ReadSendPipeAsync(PipeReader reader, Socket socket)
+    {
+        while (true)
+        {
+            ReadResult result = await reader.ReadAsync();
+            ReadOnlySequence<byte> buffer = result.Buffer;
+            try
+            {
+                if (result.IsCanceled)
+                {
+                    break;
+                }
+
+                await socket.SendAsync(buffer.ToArray(), SocketFlags.None);
+
+                reader.AdvanceTo(buffer.Start, buffer.End);
+
+                if (result.IsCompleted)
+                {
+                    break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+    }
     // 버퍼의 헤더를 읽고 해당 크기만큼 딱 데이터를 잘라서 메세지큐에 삽입한다
     private void BufferToMessageQueue(ref ReadOnlySequence<byte> buffer)
     {
 
-        // 헤더 읽기
-        int HeaderLength = sizeof(int);
-        SequencePosition Position = buffer.GetPosition(HeaderLength);
-        int Length = BitConverter.ToInt32(buffer.Slice(0, Position).ToArray());
-
         // 데이터 읽기
-        buffer = buffer.Slice(Position,Length);
         byte[] ReceivedData = buffer.ToArray();
-        LoginMessageQueue.Enqueue( ReceivedData );
+        LoginMessagePacket Msg = new LoginMessagePacket();
+        Msg = SocketDataSerializer.DeSerialize<LoginMessagePacket>(ReceivedData);
+        Console.WriteLine(Msg.IDNum + " " +  Msg.StringValue1 + " " + Msg.StringValue2);
+        if(Msg != null)
+        {
+            LoginMessageQueue.Enqueue(Msg);
+        }
+        else
+        {
+            Console.WriteLine("Msg is null");
+        }
     }
 
     public void ShutDownServerCore()
@@ -224,7 +306,7 @@ class LoginCore
     // 스레드풀에서 메세지를 처리하는 함수
     private void ProcessMessage()
     {
-
+        MessageBox.Show("데이터 잘 읽음!");
     }
 }
 
@@ -233,3 +315,26 @@ class LoginCore
 // 그리고 Queue에 집어 넣어서 나중에 스레드 풀을 통해서 그 메세지들을 처리하는 ProcessMessage 함수를 만들자
 // 데이터를 읽어오고, 버퍼에 저장하고, 메모리 관리는 PipeLines가 해준다.
 // 나는 읽어온 버퍼를 파싱하고, 큐에 넣어서 메세지 처리하는 것을 구현해야한다.
+
+public static class SocketDataSerializer
+{
+    public static T DeSerialize<T>(byte[] data)
+    {
+        return JsonSerializer.Deserialize<T>(data);
+    }
+
+    public static byte[] Serialize<T>(T obj)
+    {
+        return JsonSerializer.SerializeToUtf8Bytes(obj);
+    }
+}
+
+[Serializable]
+public class LoginMessagePacket
+{
+    // 변수는 아무렇게나 추가 가능
+    public LOGIN_CLIENT_PACKET_ID IDNum { get; set; }
+    public string StringValue1 { get; set; } = string.Empty;
+    public string StringValue2 { get; set; } = string.Empty;
+    public int IntegerValue1 { get; set; } = 0;
+}
