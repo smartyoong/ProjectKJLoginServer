@@ -5,6 +5,7 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,36 +18,33 @@ using System.Threading.Tasks;
 
 namespace LoginServerAdvanced
 {
-    public class DataPipeLines
+    public static class DataPipeLines
     {
-        private Pipe? LoginPipeLines;
-        private Pipe? LoginSendPipeLines;
-        private MessageDataProcess? MessageDataProcessor;
+        const int MinimumBufferSize = 1024;
+        private static Pipe? LoginPipeLines = new Pipe();
+        //private Pipe? LoginSendPipeLines;
 
-        public void InitPipe(ref MessageDataProcess MDP)
+        public static async Task RecvData(Socket ReceivedSocket)
         {
-            LoginPipeLines = new Pipe();
-            LoginSendPipeLines = new Pipe();
-            MessageDataProcessor = MDP;
+            Task Fill = FillPipeAsync(ReceivedSocket);
+            Task Read = ReadPipeAsync();
+            await Task.WhenAll(Fill, Read);
         }
-        public async Task FillPipeAsync(Socket socket)
+        private async static Task FillPipeAsync(Socket ClientSocket)
         {
-            const int minimumBufferSize = 1024;
 
             while (true)
             {
                 if(LoginPipeLines == null) return;
-                Memory<byte> memory = LoginPipeLines.Writer.GetMemory(minimumBufferSize);
-
-                int bytesRead = await socket.ReceiveAsync(memory);
-
-                if (bytesRead == 0)
+                Memory<byte> MemorySpace = LoginPipeLines.Writer.GetMemory(MinimumBufferSize);
+                int ReceivedLength = await ClientSocket.ReceiveAsync(MemorySpace);
+                if (ReceivedLength <= 0) 
                 {
-                    break;
+                    return;
                 }
                 try
                 {
-                    LoginPipeLines.Writer.Advance(bytesRead);
+                    LoginPipeLines.Writer.Advance(ReceivedLength);
                     FlushResult WriteResult = await LoginPipeLines.Writer.FlushAsync();
 
                     if (WriteResult.IsCompleted)
@@ -54,157 +52,166 @@ namespace LoginServerAdvanced
                         break;
                     }
                 }
-                catch (Exception ex)
+                catch(Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    MessageBox.Show(ex.Message);
                 }
             }
 
             await LoginPipeLines.Writer.CompleteAsync();
         }
 
-        public async Task ReadPipeAsync()
+        private async static Task ReadPipeAsync()
         {
             while (true)
             {
                 if( LoginPipeLines == null) return;
-                ReadResult result = await LoginPipeLines.Reader.ReadAsync();
-                ReadOnlySequence<byte> buffer = result.Buffer;
+                ReadResult Result = await LoginPipeLines.Reader.ReadAsync();
+                ReadOnlySequence<byte> Buffer = Result.Buffer;
                 try
                 {
-                    if (result.IsCanceled)
+                    if (Result.IsCanceled)
                     {
                         break;
                     }
-                    if (MessageDataProcessor == null) return;
-                    MessageDataProcessor.BufferToMessageQueue(ref buffer);
+                    MessageDataProcess.BufferToMessageQueue(ref Buffer);
 
-                    LoginPipeLines.Reader.AdvanceTo(buffer.Start, buffer.End);
+                    LoginPipeLines.Reader.AdvanceTo(Buffer.Start, Buffer.End);
 
-                    if (result.IsCompleted)
+                    if (Result.IsCompleted)
                     {
                         break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    MessageBox.Show(ex.Message);
                 }
             }
 
             await LoginPipeLines.Reader.CompleteAsync();
         }
-        public async Task FillSendPipeAsync(byte[] data)
+        //public async Task FillSendPipeAsync(byte[] data)
+        //{
+        //    const int minimumBufferSize = 1024;
+        //    while (true)
+        //    {
+        //        if (data.Length == 0)
+        //        {
+        //            break;
+        //        }
+        //        if (LoginSendPipeLines == null) return;
+        //        Memory<byte> memory = LoginSendPipeLines.Writer.GetMemory(minimumBufferSize);
+        //        try
+        //        {
+        //            data.CopyTo(memory.Span);
+        //            LoginSendPipeLines.Writer.Advance(data.Length);
+        //            FlushResult WriteResult = await LoginSendPipeLines.Writer.FlushAsync();
+
+        //            if (WriteResult.IsCompleted)
+        //            {
+        //                break;
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine(ex.Message);
+        //        }
+
+        //    }
+        //}
+
+
+        //public async Task ReadSendPipeAsync(Socket socket)
+        //{
+        //    while (true)
+        //    {
+        //        if (LoginSendPipeLines == null) return;
+        //        ReadResult result = await LoginSendPipeLines.Reader.ReadAsync();
+        //        ReadOnlySequence<byte> buffer = result.Buffer;
+        //        try
+        //        {
+        //            if (result.IsCanceled)
+        //            {
+        //                break;
+        //            }
+
+        //            await socket.SendAsync(buffer.ToArray(), SocketFlags.None);
+
+        //            LoginSendPipeLines.Reader.AdvanceTo(buffer.Start, buffer.End);
+
+        //            if (result.IsCompleted)
+        //            {
+        //                break;
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine(ex.Message);
+        //        }
+        //    }
+        //}
+        public static void Cancel()
         {
-            const int minimumBufferSize = 1024;
-            while (true)
-            {
-                if (data.Length == 0)
-                {
-                    break;
-                }
-                if (LoginSendPipeLines == null) return;
-                Memory<byte> memory = LoginSendPipeLines.Writer.GetMemory(minimumBufferSize);
-                try
-                {
-                    data.CopyTo(memory.Span);
-                    LoginSendPipeLines.Writer.Advance(data.Length);
-                    FlushResult WriteResult = await LoginSendPipeLines.Writer.FlushAsync();
-
-                    if (WriteResult.IsCompleted)
-                    {
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-
-            }
-        }
-
-
-        public async Task ReadSendPipeAsync(Socket socket)
-        {
-            while (true)
-            {
-                if (LoginSendPipeLines == null) return;
-                ReadResult result = await LoginSendPipeLines.Reader.ReadAsync();
-                ReadOnlySequence<byte> buffer = result.Buffer;
-                try
-                {
-                    if (result.IsCanceled)
-                    {
-                        break;
-                    }
-
-                    await socket.SendAsync(buffer.ToArray(), SocketFlags.None);
-
-                    LoginSendPipeLines.Reader.AdvanceTo(buffer.Start, buffer.End);
-
-                    if (result.IsCompleted)
-                    {
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            }
-        }
-        public void Abort()
-        {
-            if(LoginSendPipeLines == null || LoginPipeLines == null) return;
+            if(LoginPipeLines == null) return;
             LoginPipeLines.Reader.CancelPendingRead();
-            LoginSendPipeLines.Reader.CancelPendingRead();
+        }
+
+        private static void MoveData(byte[] Source, ref Memory<byte> Destination)
+        {
+            if (Source == null)
+            {
+                throw new ArgumentNullException(nameof(Source));
+            }
+
+            if (Destination.Length < Source.Length)
+            {
+                throw new ArgumentException("Destination memory is too small.", nameof(Destination));
+            }
+
+            GCHandle handle = GCHandle.Alloc(Source, GCHandleType.Pinned);
+            try
+            {
+                IntPtr SourcePtr = handle.AddrOfPinnedObject();
+                Memory<byte> SourceMemory = MemoryMarshal.CreateFromPinnedArray(Source, 0, Source.Length);
+                SourceMemory.CopyTo(Destination);
+            }
+            finally
+            {
+                handle.Free();
+            }
         }
     }
 
-    public class LoginSocket
+    public static class LoginSocket
     {
-        private Socket? ListenSocket;
-        private DataPipeLines? DataPipe;
-        private DataPipeLines? DataSendPipe;
-        public void InitLoginSocket()
+        private static Socket? ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private static CancellationTokenSource? CancelSocketCancel= new CancellationTokenSource();
+        public static void InitLoginSocket()
         {
-            ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            ListenSocket.Bind(new IPEndPoint(IPAddress.Any, 11220));
-            ListenSocket.Listen(1000);
+            ListenSocket?.Bind(new IPEndPoint(IPAddress.Any, 11220));
+            ListenSocket?.Listen(1000);
         }
-        public async void Run()
+        public async static Task Run()
         {
-            try
-            {
-                await ProcessNetwork();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        }
-        private async Task ProcessNetwork()
-        {
-            while (true)
+            if(CancelSocketCancel == null) return;
+            while (!CancelSocketCancel.IsCancellationRequested)
             {
                 if (ListenSocket == null) return;
                 Socket ClientSocket = await ListenSocket.AcceptAsync();
-                if(DataPipe == null) return;
-                Task Writing = DataPipe.FillPipeAsync(ClientSocket);
-                Task Reading = DataPipe.ReadPipeAsync();
-
-                await Task.WhenAll(Writing, Reading);
-
+                DataPipeLines.RecvData(ClientSocket);
             }
         }
-        private async Task SendData(Socket ClientSock)
+        public static void SendData(Socket ClientSock)
         {
             byte[] data = null; // 추후 바꿔야함
-            if (DataSendPipe == null) return;
-            Task writing = DataSendPipe.FillSendPipeAsync(data);
-            Task reading = DataSendPipe.ReadSendPipeAsync(ClientSock); // 이것도 바꿔야함
-            await Task.WhenAll(writing, reading); // 여기도 바꿔야함
+            if (ClientSock == null) return;
+            ClientSock.Send(data);
+        }
+        public static void Cancel()
+        {
+            if (CancelSocketCancel == null) return;
+            CancelSocketCancel.Cancel();
         }
     }
 

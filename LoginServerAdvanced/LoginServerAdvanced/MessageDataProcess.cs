@@ -1,27 +1,15 @@
-﻿using System;
+﻿using Microsoft.Identity.Client;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace LoginServerAdvanced
 {
-    public class MessageDataProcess
+    public static class MessageDataProcess
     {
-        private ConcurrentQueue<LoginMessagePacket>? LoginMessageQueue;
-        private readonly CancellationTokenSource CancelProgress = new CancellationTokenSource();
-        private readonly AutoResetEvent QueueEvent = new AutoResetEvent(false);
+        private static BlockingCollection<LoginMessagePacket>? LoginMessageQueue = new BlockingCollection<LoginMessagePacket>();
+        private readonly static CancellationTokenSource CancelProgress = new CancellationTokenSource();
 
-        public void InitDataProcess()
-
-        {
-            LoginMessageQueue = new ConcurrentQueue<LoginMessagePacket>();
-        }
-        public void BufferToMessageQueue(ref ReadOnlySequence<byte> buffer)
+        public static void BufferToMessageQueue(ref ReadOnlySequence<byte> buffer)
         {
 
             // 데이터 읽기
@@ -31,48 +19,55 @@ namespace LoginServerAdvanced
             if (Msg != null)
             {
                 if (LoginMessageQueue == null) return;
-                LoginMessageQueue.Enqueue(Msg);
-                QueueEvent.Set();
+                LoginMessageQueue.Add(Msg);
             }
             else
             {
-                Console.WriteLine("Msg is null");
+                MessageBox.Show("Msg is null");
             }
         }
-        private void ProcessMessage()
+        private static void ProcessMessage()
         {
             if (LoginMessageQueue == null) return;
-            while (!CancelProgress.IsCancellationRequested)
+            try
             {
-                LoginMessagePacket? TempPacket;
-                if (LoginMessageQueue.TryDequeue(out TempPacket))
+                while (!LoginMessageQueue.IsCompleted)
                 {
+                    LoginMessagePacket? TempPacket;
+                    TempPacket = LoginMessageQueue.Take(CancelProgress.Token);
                     if (TempPacket == null) return;
-
-                    switch(TempPacket.IDNum)
+                    switch (TempPacket.IDNum)
                     {
-                        
 
+                        case LOGIN_CLIENT_PACKET_ID.LOGIN_CLIENT_TRY_LOGIN:
+                            MessageBox.Show("SEX");
+                            break;
                     }
-                    
-                } 
-                else
-                {
-                    QueueEvent.WaitOne();
+
                 }
             }
-        }
-
-        public async void Run()
-        {
-
-        }
-
-        public void Cancel()
-        {
-            CancelProgress.Cancel();
-            QueueEvent.Set();
-        }
-
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
     }
+
+    public static async Task Run()
+    {
+        await Task.Run(() =>
+        {
+            while (!CancelProgress.IsCancellationRequested)
+            {
+                ProcessMessage();
+            }
+        });
+    }
+
+    public static void Cancel()
+    {
+        CancelProgress.Cancel();
+        LoginMessageQueue?.CompleteAdding();
+    }
+
+}
 }

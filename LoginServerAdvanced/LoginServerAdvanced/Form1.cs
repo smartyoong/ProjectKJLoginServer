@@ -41,7 +41,7 @@ namespace LoginServerAdvanced
                 {
                     LoginServerLogList.Items.Add(LogItemAddTime("서버를 시작합니다."));
                     LoginServerCore.InitLoginServer();
-                    await LoginServerCore.Run();
+                    LoginServerCore.Run();
                     LoginServerLogList.Items.Add(LogItemAddTime("서버 버퍼 시작"));
                     LoginServerLogList.Items.Add(LogItemAddTime("서버오픈 완료"));
                 }
@@ -56,7 +56,7 @@ namespace LoginServerAdvanced
 
         private void ServerStopButton_Click(object sender, EventArgs e)
         {
-
+            LoginServerCore.ShutDownServerCore();
         }
 
         private void ServerReSetButton_Click(object sender, EventArgs e)

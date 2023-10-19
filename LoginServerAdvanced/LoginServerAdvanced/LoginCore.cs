@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,25 +12,16 @@ namespace LoginServerAdvanced
     {
         private Dictionary<string, int>? LoginUsers; // <ID,랜덤값>으로 유효성 검사 ID만 딱 보내서 위조 로그인 하는것을 방지
         private bool IsServerRun = false;
-        MessageDataProcess? MessageProcessor;
-        DataPipeLines? LoginPipe;
-        LoginSocket? LoginSock;
-        LoginDataBase? LoginDB;
-        GameSocket? GameSock;
+        LoginDataBase? LoginDB = new LoginDataBase();
+        GameSocket? GameSock = new GameSocket();
 
         public void InitLoginServer()
         {
             IsServerRun = true;
             ThreadPool.SetMaxThreads(4, 4);
-            MessageProcessor = new MessageDataProcess();
-            LoginPipe = new DataPipeLines();
-            LoginPipe.InitPipe(ref MessageProcessor);
-            LoginSock = new LoginSocket();
-            LoginSock.InitLoginSocket();
-            LoginDB = new LoginDataBase();
-            LoginDB.InitDataBase();
-            GameSock = new GameSocket();
-            GameSock.InitGameSocket();
+            LoginSocket.InitLoginSocket();
+            LoginDB?.InitDataBase();
+            GameSock?.InitGameSocket();
         }
         public bool IsServerOn()
         {
@@ -37,12 +29,22 @@ namespace LoginServerAdvanced
         }
         public async Task Run()
         {
-
+            try
+            {
+                LoginSocket.Run();
+                MessageDataProcess.Run();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         public void ShutDownServerCore()
         {
-
+            LoginSocket.Cancel();
+            DataPipeLines.Cancel();
+            MessageDataProcess.Cancel();
         }
     }
 }
