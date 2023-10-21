@@ -38,6 +38,7 @@ namespace LoginServerAdvanced
                 if(LoginPipeLines == null) return;
                 Memory<byte> MemorySpace = LoginPipeLines.Writer.GetMemory(MinimumBufferSize);
                 int ReceivedLength = await ClientSocket.ReceiveAsync(MemorySpace);
+                // 여기까지는 매우 작동 잘됨 파이프라인에서 문제인듯?
                 if (ReceivedLength <= 0) 
                 {
                     return;
@@ -199,14 +200,14 @@ namespace LoginServerAdvanced
             {
                 if (ListenSocket == null) return;
                 Socket ClientSocket = await ListenSocket.AcceptAsync();
-                DataPipeLines.RecvData(ClientSocket);
+                await DataPipeLines.RecvData(ClientSocket);
             }
         }
         public static void SendData(Socket ClientSock)
         {
             byte[] data = null; // 추후 바꿔야함
             if (ClientSock == null) return;
-            ClientSock.Send(data);
+            ClientSock.Send(data!);
         }
         public static void Cancel()
         {

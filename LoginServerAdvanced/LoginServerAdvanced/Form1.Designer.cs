@@ -107,7 +107,7 @@
 
         #endregion
 
-        private ListBox LoginServerLogList;
+        private static ListBox LoginServerLogList;
         private ListBox InfoVersionViewListBox;
         private Button ServerStartButton;
         private Button ServerStopButton;

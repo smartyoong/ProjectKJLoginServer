@@ -11,7 +11,8 @@ namespace LoginServerAdvanced
     {
         public static T DeSerialize<T>(byte[] data)
         {
-            return JsonSerializer.Deserialize<T>(data);
+            var ByteData = new Utf8JsonReader(data);
+            return JsonSerializer.Deserialize<T>(ref ByteData)!;
         }
 
         public static byte[] Serialize<T>(T obj)

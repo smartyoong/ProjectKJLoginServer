@@ -33,14 +33,15 @@ namespace LoginServerAdvanced
             {
                 while (!LoginMessageQueue.IsCompleted)
                 {
-                    LoginMessagePacket? TempPacket;
+                    LoginMessagePacket? TempPacket = new LoginMessagePacket();
                     TempPacket = LoginMessageQueue.Take(CancelProgress.Token);
                     if (TempPacket == null) return;
                     switch (TempPacket.IDNum)
                     {
 
                         case LOGIN_CLIENT_PACKET_ID.LOGIN_CLIENT_TRY_LOGIN:
-                            MessageBox.Show("SEX");
+                            Console.WriteLine(TempPacket.StringValue1);
+                            Console.WriteLine(TempPacket.StringValue2);
                             break;
                     }
 

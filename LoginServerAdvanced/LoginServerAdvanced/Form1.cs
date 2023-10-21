@@ -39,19 +39,18 @@ namespace LoginServerAdvanced
                 SystemSounds.Beep.Play();
                 if (MessageBox.Show("서버를 시작하시겠습니까?", "시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
-                    LoginServerLogList.Items.Add(LogItemAddTime("서버를 시작합니다."));
+                    LogItemAddTime("서버를 시작합니다.");
                     LoginServerCore.InitLoginServer();
                     LoginServerCore.Run();
-                    LoginServerLogList.Items.Add(LogItemAddTime("서버 버퍼 시작"));
-                    LoginServerLogList.Items.Add(LogItemAddTime("서버오픈 완료"));
+                    LogItemAddTime("서버 버퍼 시작");
+                    LogItemAddTime("서버오픈 완료");
                 }
             }
         }
-        public string LogItemAddTime(string LogContext)
+        public static void LogItemAddTime(string LogContext)
         {
-
             string Temp = string.Format("{0,-40}{1}", LogContext, DateTime.Now.ToString());
-            return Temp;
+            LoginServerLogList.Items.Add(Temp);
         }
 
         private void ServerStopButton_Click(object sender, EventArgs e)
