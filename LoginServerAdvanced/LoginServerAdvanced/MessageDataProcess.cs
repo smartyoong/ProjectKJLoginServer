@@ -9,11 +9,9 @@ namespace LoginServerAdvanced
         private static BlockingCollection<LoginMessagePacket>? LoginMessageQueue = new BlockingCollection<LoginMessagePacket>();
         private readonly static CancellationTokenSource CancelProgress = new CancellationTokenSource();
 
-        public static void BufferToMessageQueue(ref ReadOnlySequence<byte> buffer)
+        public static void BufferToMessageQueue(ref byte[] ReceivedData)
         {
 
-            // 데이터 읽기
-            byte[] ReceivedData = buffer.ToArray();
             LoginMessagePacket Msg;
             Msg = SocketDataSerializer.DeSerialize<LoginMessagePacket>(ReceivedData);
             if (Msg != null)

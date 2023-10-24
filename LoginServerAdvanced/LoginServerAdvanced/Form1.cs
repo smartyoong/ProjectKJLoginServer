@@ -30,7 +30,7 @@ namespace LoginServerAdvanced
         {
             InitializeComponent();
         }
-        private async void ServerStartButton_Click(object sender, EventArgs e)
+        private void ServerStartButton_Click(object sender, EventArgs e)
         {
             if (LoginServerCore.IsServerOn())
                 MessageBox.Show("이미 서버가 실행중입니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);

@@ -14,12 +14,13 @@ namespace LoginServerAdvanced
         private bool IsServerRun = false;
         LoginDataBase? LoginDB = new LoginDataBase();
         GameSocket? GameSock = new GameSocket();
+        LoginSocket LoginSock = new LoginSocket();
 
         public void InitLoginServer()
         {
             IsServerRun = true;
             ThreadPool.SetMaxThreads(4, 4);
-            LoginSocket.InitLoginSocket();
+            LoginSock.InitLoginSocket();
             LoginDB?.InitDataBase();
             GameSock?.InitGameSocket();
         }
@@ -27,11 +28,11 @@ namespace LoginServerAdvanced
         {
             return IsServerRun;
         }
-        public async Task Run()
+        public void Run()
         {
             try
             {
-                LoginSocket.Run();
+                LoginSock.Run();
                 MessageDataProcess.Run();
             }
             catch (Exception ex)
@@ -42,8 +43,7 @@ namespace LoginServerAdvanced
 
         public void ShutDownServerCore()
         {
-            LoginSocket.Cancel();
-            DataPipeLines.Cancel();
+            LoginSock.Cancel();
             MessageDataProcess.Cancel();
         }
     }
