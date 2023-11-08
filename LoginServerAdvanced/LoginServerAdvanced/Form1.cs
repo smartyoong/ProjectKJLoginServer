@@ -29,6 +29,7 @@ namespace LoginServerAdvanced
         public LoginServer()
         {
             InitializeComponent();
+            LoginServerLogList.HorizontalScrollbar = true;
         }
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
@@ -49,8 +50,13 @@ namespace LoginServerAdvanced
         }
         public static void LogItemAddTime(string LogContext)
         {
-            string Temp = string.Format("{0,-40}{1}", LogContext, DateTime.Now.ToString());
-            LoginServerLogList.Items.Add(Temp);
+            string Temp = string.Format("{0,-25}{1}",DateTime.Now.ToString(), LogContext);
+            if(LoginServerLogList.InvokeRequired)
+            {
+                LoginServerLogList.Invoke(new Action<string>(LogItemAddTime),LogContext);
+            }
+            else
+                LoginServerLogList.Items.Add(Temp);
         }
 
         private void ServerStopButton_Click(object sender, EventArgs e)
@@ -71,7 +77,3 @@ namespace LoginServerAdvanced
  * 로그인 서버는 응답을 해주는 것으로 역할을 끝낸다.
  */
 
-class LoginCore
-{
-
-}

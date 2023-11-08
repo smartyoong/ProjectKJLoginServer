@@ -8,6 +8,7 @@ namespace LoginServerAdvanced
         const int MaximunBufferSize = 1024;
         private Socket? ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         private CancellationTokenSource? CancelSocketCancel = new CancellationTokenSource();
+        public List<Task> SocketTasks = new List<Task>();
         public void InitLoginSocket()
         {
             ListenSocket?.Bind(new IPEndPoint(IPAddress.Any, 11220));
@@ -15,19 +16,40 @@ namespace LoginServerAdvanced
         }
         public async Task Run()
         {
-            if (CancelSocketCancel == null) return;
-            while (!CancelSocketCancel.IsCancellationRequested)
+            try
             {
-                if (ListenSocket == null) return;
-                Socket ClientSocket = await ListenSocket.AcceptAsync();
-                Task.Run(() => RecvData(ClientSocket));
+                if (CancelSocketCancel == null) return;
+                while (!CancelSocketCancel.Token.IsCancellationRequested)
+                {
+                    if (ListenSocket == null) return;
+                    //accept 단계일때 취소하는법 추가해야함
+                    Socket ClientSocket = await ListenSocket.AcceptAsync(CancelSocketCancel.Token);
+                    SocketTasks.Add(Task.Run(() => RecvData(ClientSocket), CancelSocketCancel.Token));
+                }
             }
-        }
-        public void SendData(Socket ClientSock)
-        {
-            byte[] data = null; // 추후 바꿔야함
-            if (ClientSock == null) return;
-            ClientSock.Send(data!);
+            catch (OperationCanceledException ex)
+            {
+                LoginServer.LogItemAddTime($"LoginSocket Run이 정상적으로 종료되었습니다. {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                if (ex is not OperationCanceledException)
+                {
+                    string[] lines = ex.StackTrace!.Split('\n');
+                    foreach (string line in lines)
+                    {
+                        LoginServer.LogItemAddTime(line);
+                    }
+                    LoginServer.LogItemAddTime(ex.Message);
+                }
+            }
+            finally
+            {
+                ListenSocket?.Dispose();
+                ListenSocket?.Close();
+                await Task.WhenAll(SocketTasks);
+                LoginServer.LogItemAddTime("모든 소켓 작업 취소 완료");
+            }
         }
         public void Cancel()
         {
@@ -41,23 +63,44 @@ namespace LoginServerAdvanced
             {
                 byte[] buffer = new byte[MaximunBufferSize];
                 if (CancelSocketCancel == null) return;
-                while (!CancelSocketCancel.IsCancellationRequested)
+                while (!CancelSocketCancel.Token.IsCancellationRequested)
                 {
-                    int ReceivedLength = await Sock.ReceiveAsync(buffer, SocketFlags.None);
+                    int ReceivedLength = await Sock.ReceiveAsync(buffer, SocketFlags.None,CancelSocketCancel.Token);
                     if (ReceivedLength <= 0)
                     {
                         return;
                     }
-                    MessageDataProcess.BufferToMessageQueue(ref buffer);
+                    MessageDataProcess.BufferToMessageQueue(ref buffer, Sock);
                 }
+            }
+            catch(SocketException ex)
+            {
+                if(ex.SocketErrorCode == SocketError.ConnectionAborted || ex.SocketErrorCode == SocketError.ConnectionReset || ex.SocketErrorCode == SocketError.Shutdown)
+                {
+                    IPEndPoint? RemoteEndPoint = Sock.RemoteEndPoint as IPEndPoint;
+                    if (RemoteEndPoint != null)
+                    {
+                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} 님이 로그아웃 하였습니다");
+                    }
+                }
+            }
+            catch(OperationCanceledException ex)
+            {
+                LoginServer.LogItemAddTime($"RecvData가 정상적으로 종료되었습니다. {ex.Message}");
             }
             catch(Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                string[] lines = ex.StackTrace!.Split('\n');
+                foreach (string line in lines)
+                {
+                    LoginServer.LogItemAddTime(line);
+                }
+                LoginServer.LogItemAddTime(ex.Message);
             }
             finally
             {
                 Sock.Close();
+
             }
         }
     }

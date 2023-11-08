@@ -42,18 +42,21 @@ namespace LoginServerAdvanced
                     }
                     LoginPipeLines.Writer.Advance(ReceivedLength);
                     FlushResult WriteResult = await LoginPipeLines.Writer.FlushAsync();
-                    Console.WriteLine("OK");
                     if (WriteResult.IsCompleted)
                     {
                         break;
                     }
                 }
                 await LoginPipeLines.Writer.CompleteAsync();
-                Console.WriteLine("Sex");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                string[] lines = ex.StackTrace!.Split('\n');
+                foreach (string line in lines)
+                {
+                    LoginServer.LogItemAddTime(line);
+                }
+                LoginServer.LogItemAddTime(ex.Message);
             }
             finally
             {
@@ -74,10 +77,8 @@ namespace LoginServerAdvanced
                     {
                         break;
                     }
-                    Console.WriteLine("Ready?");
                     //MessageDataProcess.BufferToMessageQueue(ref Buffer);
                     LoginPipeLines.Reader.AdvanceTo(Buffer.Start, Buffer.End);
-                    Console.WriteLine("Done");
                     if (Result.IsCompleted)
                     {
                         break;
@@ -85,15 +86,18 @@ namespace LoginServerAdvanced
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    string[] lines = ex.StackTrace!.Split('\n');
+                    foreach (string line in lines)
+                    {
+                        LoginServer.LogItemAddTime(line);
+                    }
+                    LoginServer.LogItemAddTime(ex.Message);
                 }
                 await LoginPipeLines.Reader.CompleteAsync();
-                Console.WriteLine("Done2");
             }
         }
         private static async Task ProcessLinesAsync(Socket socket)
         {
-            Console.WriteLine($"[{socket.RemoteEndPoint}]: connected");
 
             // Create a PipeReader over the network stream
             var stream = new NetworkStream(socket);
@@ -119,7 +123,6 @@ namespace LoginServerAdvanced
             // Mark the PipeReader as complete.
             await reader.CompleteAsync();
 
-            Console.WriteLine($"[{socket.RemoteEndPoint}]: disconnected");
         }
         public void Cancel()
         {

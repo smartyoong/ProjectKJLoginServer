@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -25,9 +26,21 @@ namespace LoginServerAdvanced
     public class LoginMessagePacket
     {
         // 변수는 아무렇게나 추가 가능
+        public Socket? ResponeSocket { get; set; }
         public LOGIN_CLIENT_PACKET_ID IDNum { get; set; }
         public string StringValue1 { get; set; } = string.Empty;
         public string StringValue2 { get; set; } = string.Empty;
         public int IntegerValue1 { get; set; } = 0;
     }
+
+    [Serializable]
+    public class LoginSendToClientMessagePacket
+    {
+        // 변수는 아무렇게나 추가 가능
+        public LOGIN_SERVER_PACKET_ID IDNum { get; set; }
+        public string StringValue1 { get; set; } = string.Empty;
+        public string StringValue2 { get; set; } = string.Empty;
+        public int IntegerValue1 { get; set; } = 0;
+    }
+
 }
