@@ -7,13 +7,20 @@ namespace LoginServerAdvanced
     public static class MessageDataProcess
     {
         private static BlockingCollection<LoginMessagePacket>? LoginMessageQueue = new BlockingCollection<LoginMessagePacket>();
-        private readonly static CancellationTokenSource CancelProgress = new CancellationTokenSource();
+        private static CancellationTokenSource CancelProgress = new CancellationTokenSource();
         private static LoginDataBase? LoginDBSocket;
 
         public static void Init(LoginDataBase LoginDB)
         {
             if (LoginDB == null) return;
             LoginDBSocket = LoginDB;
+            if (LoginMessageQueue!.IsCompleted)
+            {
+                LoginMessageQueue.Dispose();
+                LoginMessageQueue = new BlockingCollection<LoginMessagePacket>();
+                CancelProgress.Dispose();
+                CancelProgress = new CancellationTokenSource();
+            }
 
         }
         public static void BufferToMessageQueue(ref byte[] ReceivedData, Socket Sock)

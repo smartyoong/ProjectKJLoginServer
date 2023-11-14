@@ -3,10 +3,11 @@ using System.Data;
 
 namespace LoginServerAdvanced
 {
-    public class LoginDataBase
+    public class LoginDataBase : IDisposable
     {
         private SqlConnection? AccountDBConnect;
         private string SQLConnectString = string.Format("Server={0};Database={1};Integrated Security=SSPI;Encrypt=false;", "SMARTYOONG\\SQLEXPRESS", "AccountDB");
+        private bool Disposed = false;
 
         public void InitDataBase()
         {
@@ -25,6 +26,26 @@ namespace LoginServerAdvanced
                 }
                 LoginServer.LogItemAddTime(ex.Message);
             }
+        }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool IsDisposing)
+        {
+            // 중복 실행 방지
+            if (Disposed)
+                return;
+            if (IsDisposing)
+            {
+                // 관리 리소스 해제
+            }
+            // 비관리 리소스 해제
+            AccountDBConnect?.Close();
+
+            Disposed = true;
         }
         public int SPCall(MS_SQL_SP_ID ID, LoginMessagePacket Packet)
         {

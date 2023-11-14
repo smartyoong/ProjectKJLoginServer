@@ -15,12 +15,15 @@ namespace LoginServerAdvanced
         private bool IsServerRun = false;
         LoginDataBase? LoginDB = new LoginDataBase();
         GameSocket? GameSock = new GameSocket();
-        LoginSocket LoginSock = new LoginSocket();
+        LoginSocket? LoginSock;
         Task? LoginSocketTask;
         Task? MessageDataProcessTask;
 
         public void InitLoginServer()
         {
+            LoginDB = new LoginDataBase();
+            GameSock = new GameSocket();
+            LoginSock = new LoginSocket();
             IsServerRun = true;
             ThreadPool.SetMaxThreads(4, 4);
             LoginSock.InitLoginSocket();
@@ -39,10 +42,14 @@ namespace LoginServerAdvanced
         {
             try
             {
-                LoginSocketTask = LoginSock.Run();
+                LoginSocketTask = LoginSock?.Run();
                 MessageDataProcessTask = MessageDataProcess.Run();
-                await Task.WhenAll(LoginSocketTask, MessageDataProcessTask);
+                await Task.WhenAll(LoginSocketTask!, MessageDataProcessTask);
+                LoginSock!.Dispose();
+                MessageDataProcessTask!.Dispose();
+                LoginServer.LogItemAddTime("서버 객체 삭제 완료.");
                 LoginServer.LogItemAddTime("서버가 종료되었습니다.");
+                IsServerRun = false;
             }
             catch (Exception ex)
             {
@@ -66,9 +73,8 @@ namespace LoginServerAdvanced
         {
             if(IsServerRun)
             {
-                LoginSock.Cancel();
+                LoginSock?.Cancel();
                 MessageDataProcess.Cancel();
-                IsServerRun = false;
             }
         }
 
