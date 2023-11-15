@@ -78,7 +78,7 @@ namespace LoginServerAdvanced
                     IPEndPoint? RemoteEndPoint = Sock.RemoteEndPoint as IPEndPoint;
                     if (RemoteEndPoint != null)
                     {
-                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} 님이 로그아웃 하였습니다");
+                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} 유저가 연결을 끊었습니다.");
                     }
                 }
             }
@@ -97,6 +97,14 @@ namespace LoginServerAdvanced
             }
             finally
             {
+                IPEndPoint? RemoteEndPoint = Sock.RemoteEndPoint as IPEndPoint;
+                if (RemoteEndPoint != null)
+                {
+                    if(LoginCore.FindNickNameBySocket(Sock) != string.Empty)
+                        LoginServer.LogItemAddTime($"{LoginCore.FindNickNameBySocket(Sock)} {RemoteEndPoint.Address} 님이 로그아웃 하였습니다");
+                    else
+                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} (로그인 혹은 회원가입하지 않음) 님이 로그아웃 하였습니다");
+                }
                 Sock.Close();
 
             }

@@ -30,6 +30,7 @@ namespace LoginServerAdvanced
         {
             InitializeComponent();
             LoginServerLogList.HorizontalScrollbar = true;
+            InfoVersionViewListBox.BackColor = Color.Red;
         }
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
@@ -45,6 +46,7 @@ namespace LoginServerAdvanced
                     LoginServerCore.Run();
                     LogItemAddTime("서버 버퍼 시작");
                     LogItemAddTime("서버오픈 완료");
+                    InfoVersionViewListBox.BackColor = Color.Blue;
                 }
             }
         }
@@ -62,6 +64,7 @@ namespace LoginServerAdvanced
         private void ServerStopButton_Click(object sender, EventArgs e)
         {
             LoginServerCore.ShutDownServerCore();
+            InfoVersionViewListBox.BackColor = Color.Red;
         }
 
         private async void ServerReSetButton_Click(object sender, EventArgs e)
@@ -71,8 +74,10 @@ namespace LoginServerAdvanced
                 SystemSounds.Beep.Play();
                 if (MessageBox.Show("서버를 다시 시작하시겠습니까?", "재시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
+                    InfoVersionViewListBox.BackColor = Color.Red;
                     LoginServerCore.ShutDownServerCore();
                     LogItemAddTime("서버를 다시 시작하기 위해 준비합니다.");
+                    InfoVersionViewListBox.BackColor = Color.Yellow;
                     // 비동기적으로 소켓이 정리되기도 전에 바로 재생성되는것을 방지
                     await Task.Delay(10000);
                     LogItemAddTime("서버를 시작합니다.");
@@ -80,6 +85,7 @@ namespace LoginServerAdvanced
                     LoginServerCore.Run();
                     LogItemAddTime("서버 버퍼 시작");
                     LogItemAddTime("서버오픈 완료");
+                    InfoVersionViewListBox.BackColor = Color.Blue;
                 }
             }
             else
@@ -92,6 +98,7 @@ namespace LoginServerAdvanced
                     LoginServerCore.Run();
                     LogItemAddTime("서버 버퍼 시작");
                     LogItemAddTime("서버오픈 완료");
+                    InfoVersionViewListBox.BackColor = Color.Blue;
                 }
             }
         }

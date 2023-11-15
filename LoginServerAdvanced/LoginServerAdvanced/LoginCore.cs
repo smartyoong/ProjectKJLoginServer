@@ -78,15 +78,39 @@ namespace LoginServerAdvanced
             }
         }
 
-        public static void AddLoginUsers(string NikcName, Socket Sock)
+        public static void AddLoginUsers(string NickName, Socket Sock)
         {
-            if(LoginUsers != null && NikcName != null && Sock != null)
+            if(LoginUsers != null && NickName != null && Sock != null)
             {
                 lock (LoginUsers)
                 {
-                    LoginUsers.Add(NikcName, Sock);
+                    LoginUsers.Add(NickName, Sock);
                 }
             }
+        }
+        public static Socket FindSocketByNickName(string NickName)
+        {
+            if (LoginUsers != null && NickName != null)
+            {
+                lock (LoginUsers)
+                {
+                    return LoginUsers[NickName];
+                }
+            }
+            else
+                return null!;
+        }
+        public static string FindNickNameBySocket(Socket Sock)
+        {
+            if (LoginUsers != null && Sock != null)
+            {
+                lock (LoginUsers)
+                {
+                    return LoginUsers.FirstOrDefault(x => x.Value == Sock).Key;
+                }
+            }
+            else
+                return string.Empty;
         }
     }
 }
