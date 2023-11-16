@@ -10,9 +10,9 @@ namespace LoginServerAdvanced
         private static CancellationTokenSource CancelProgress = new CancellationTokenSource();
         private static LoginDataBase? LoginDBSocket;
 
-        public static void Init(LoginDataBase LoginDB)
+        public static bool Init(LoginDataBase LoginDB)
         {
-            if (LoginDB == null) return;
+            if (LoginDB == null) return false;
             LoginDBSocket = LoginDB;
             if (LoginMessageQueue!.IsCompleted)
             {
@@ -21,7 +21,7 @@ namespace LoginServerAdvanced
                 CancelProgress.Dispose();
                 CancelProgress = new CancellationTokenSource();
             }
-
+            return true;
         }
         public static void BufferToMessageQueue(ref byte[] ReceivedData, Socket Sock)
         {

@@ -19,20 +19,27 @@ namespace LoginServerAdvanced
         Task? LoginSocketTask;
         Task? MessageDataProcessTask;
 
-        public void InitLoginServer()
+        public bool InitLoginServer()
         {
             LoginDB = new LoginDataBase();
             GameSock = new GameSocket();
             LoginSock = new LoginSocket();
-            IsServerRun = true;
             ThreadPool.SetMaxThreads(4, 4);
-            LoginSock.InitLoginSocket();
-            LoginDB?.InitDataBase();
-            GameSock?.InitGameSocket();
+            if(!LoginSock.InitLoginSocket())
+                return false;
+            if(!LoginDB.InitDataBase())
+                return false;
+            if (!GameSock.InitGameSocket())
+                return false;
             if (LoginDB != null)
-                MessageDataProcess.Init(LoginDB);
+            {
+                if (!MessageDataProcess.Init(LoginDB))
+                    return false;
+            }
             else
                 MessageBox.Show("서버 초기화 실패","서버 초기화 실패",MessageBoxButtons.OK, MessageBoxIcon.Error);
+            IsServerRun = true;
+            return true;
         }
         public bool IsServerOn()
         {

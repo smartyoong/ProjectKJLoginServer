@@ -33,6 +33,11 @@
             ServerStartButton = new Button();
             ServerStopButton = new Button();
             ServerReSetButton = new Button();
+            menuStrip1 = new MenuStrip();
+            파일로그ToolStripMenuItem = new ToolStripMenuItem();
+            디렉토리설정ToolStripMenuItem = new ToolStripMenuItem();
+            로그파일열기ToolStripMenuItem = new ToolStripMenuItem();
+            menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // LoginServerLogList
@@ -40,9 +45,9 @@
             LoginServerLogList.Font = new Font("휴먼모음T", 9.75F, FontStyle.Regular, GraphicsUnit.Point);
             LoginServerLogList.FormattingEnabled = true;
             LoginServerLogList.ItemHeight = 14;
-            LoginServerLogList.Location = new Point(12, 12);
+            LoginServerLogList.Location = new Point(12, 26);
             LoginServerLogList.Name = "LoginServerLogList";
-            LoginServerLogList.Size = new Size(620, 326);
+            LoginServerLogList.Size = new Size(620, 312);
             LoginServerLogList.TabIndex = 0;
             // 
             // InfoVersionViewListBox
@@ -58,9 +63,9 @@
             // 
             ServerStartButton.Font = new Font("휴먼모음T", 18F, FontStyle.Regular, GraphicsUnit.Point);
             ServerStartButton.ForeColor = Color.Blue;
-            ServerStartButton.Location = new Point(656, 12);
+            ServerStartButton.Location = new Point(656, 26);
             ServerStartButton.Name = "ServerStartButton";
-            ServerStartButton.Size = new Size(190, 86);
+            ServerStartButton.Size = new Size(190, 78);
             ServerStartButton.TabIndex = 2;
             ServerStartButton.Text = "서버 시작";
             ServerStartButton.UseVisualStyleBackColor = true;
@@ -70,7 +75,7 @@
             // 
             ServerStopButton.Font = new Font("휴먼모음T", 18F, FontStyle.Regular, GraphicsUnit.Point);
             ServerStopButton.ForeColor = Color.Red;
-            ServerStopButton.Location = new Point(656, 138);
+            ServerStopButton.Location = new Point(656, 143);
             ServerStopButton.Name = "ServerStopButton";
             ServerStopButton.Size = new Size(190, 86);
             ServerStopButton.TabIndex = 3;
@@ -84,11 +89,41 @@
             ServerReSetButton.ForeColor = Color.FromArgb(0, 192, 0);
             ServerReSetButton.Location = new Point(656, 260);
             ServerReSetButton.Name = "ServerReSetButton";
-            ServerReSetButton.Size = new Size(190, 86);
+            ServerReSetButton.Size = new Size(190, 78);
             ServerReSetButton.TabIndex = 4;
             ServerReSetButton.Text = "서버 재시작";
             ServerReSetButton.UseVisualStyleBackColor = true;
             ServerReSetButton.Click += ServerReSetButton_Click;
+            // 
+            // menuStrip1
+            // 
+            menuStrip1.Items.AddRange(new ToolStripItem[] { 파일로그ToolStripMenuItem });
+            menuStrip1.Location = new Point(0, 0);
+            menuStrip1.Name = "menuStrip1";
+            menuStrip1.Size = new Size(858, 24);
+            menuStrip1.TabIndex = 5;
+            menuStrip1.Text = "menuStrip1";
+            // 
+            // 파일로그ToolStripMenuItem
+            // 
+            파일로그ToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { 디렉토리설정ToolStripMenuItem, 로그파일열기ToolStripMenuItem });
+            파일로그ToolStripMenuItem.Name = "파일로그ToolStripMenuItem";
+            파일로그ToolStripMenuItem.Size = new Size(67, 20);
+            파일로그ToolStripMenuItem.Text = "파일로그";
+            // 
+            // 디렉토리설정ToolStripMenuItem
+            // 
+            디렉토리설정ToolStripMenuItem.Name = "디렉토리설정ToolStripMenuItem";
+            디렉토리설정ToolStripMenuItem.Size = new Size(180, 22);
+            디렉토리설정ToolStripMenuItem.Text = "디렉토리 설정";
+            디렉토리설정ToolStripMenuItem.Click += SetFileLogDirectory;
+            // 
+            // 로그파일열기ToolStripMenuItem
+            // 
+            로그파일열기ToolStripMenuItem.Name = "로그파일열기ToolStripMenuItem";
+            로그파일열기ToolStripMenuItem.Size = new Size(180, 22);
+            로그파일열기ToolStripMenuItem.Text = "로그 파일 열기";
+            로그파일열기ToolStripMenuItem.Click += FileLogPathOpen;
             // 
             // LoginServer
             // 
@@ -100,17 +135,26 @@
             Controls.Add(ServerStartButton);
             Controls.Add(InfoVersionViewListBox);
             Controls.Add(LoginServerLogList);
+            Controls.Add(menuStrip1);
+            MainMenuStrip = menuStrip1;
             Name = "LoginServer";
             Text = "LoginServer";
+            FormClosing += LoginServerFormClosing;
+            menuStrip1.ResumeLayout(false);
+            menuStrip1.PerformLayout();
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
-
-        private static ListBox LoginServerLogList;
         private ListBox InfoVersionViewListBox;
         private Button ServerStartButton;
         private Button ServerStopButton;
         private Button ServerReSetButton;
+        private MenuStrip menuStrip1;
+        private ToolStripMenuItem 파일로그ToolStripMenuItem;
+        private ToolStripMenuItem 디렉토리설정ToolStripMenuItem;
+        private ToolStripMenuItem 로그파일열기ToolStripMenuItem;
+        private static ListBox LoginServerLogList;
     }
 }

@@ -1,36 +1,18 @@
-using System.Buffers;
-using System.Net.Sockets;
-using System.Net;
-using System.Reflection.PortableExecutable;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Media;
-using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.IO.Pipelines;
-using Microsoft.Data.SqlClient;
-using LoginServerAdvanced;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using System.Collections.Concurrent;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Text.Json;
 
 namespace LoginServerAdvanced
 {
     public partial class LoginServer : Form
     {
         private LoginCore LoginServerCore = new LoginCore();
+        private static string LogFilePath = string.Empty;
+
         public LoginServer()
         {
             InitializeComponent();
             LoginServerLogList.HorizontalScrollbar = true;
             InfoVersionViewListBox.BackColor = Color.Red;
+            SetFirstLogDirectory();
         }
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
@@ -42,9 +24,12 @@ namespace LoginServerAdvanced
                 if (MessageBox.Show("서버를 시작하시겠습니까?", "시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
                     LogItemAddTime("서버를 시작합니다.");
-                    LoginServerCore.InitLoginServer();
+                    if (!LoginServerCore.InitLoginServer())
+                    {
+                        LogItemAddTime("서버를 시작중에 오류가 발생했습니다.");
+                        return;
+                    }
                     LoginServerCore.Run();
-                    LogItemAddTime("서버 버퍼 시작");
                     LogItemAddTime("서버오픈 완료");
                     InfoVersionViewListBox.BackColor = Color.Blue;
                 }
@@ -52,13 +37,14 @@ namespace LoginServerAdvanced
         }
         public static void LogItemAddTime(string LogContext)
         {
-            string Temp = string.Format("{0,-25}{1}",DateTime.Now.ToString(), LogContext);
-            if(LoginServerLogList.InvokeRequired)
+            string Temp = string.Format("{0,-25}{1}", DateTime.Now.ToString(), LogContext);
+            if (LoginServerLogList.InvokeRequired)
             {
-                LoginServerLogList.Invoke(new Action<string>(LogItemAddTime),LogContext);
+                LoginServerLogList.Invoke(new Action<string>(LogItemAddTime), LogContext);
             }
             else
                 LoginServerLogList.Items.Add(Temp);
+            File.AppendAllText(LogFilePath, Temp + Environment.NewLine);
         }
 
         private void ServerStopButton_Click(object sender, EventArgs e)
@@ -100,6 +86,58 @@ namespace LoginServerAdvanced
                     LogItemAddTime("서버오픈 완료");
                     InfoVersionViewListBox.BackColor = Color.Blue;
                 }
+            }
+        }
+
+        private void LoginServerFormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (LoginServerCore.IsServerOn())
+            {
+                LoginServerCore.ShutDownServerCore();
+            }
+        }
+
+        private void SetFileLogDirectory(object sender, EventArgs e)
+        {
+            System.Windows.Forms.FolderBrowserDialog FolderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
+
+            if (FolderBrowserDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                string FolderPath = FolderBrowserDialog.SelectedPath;
+                LogFilePath = Path.Combine(FolderPath, "log.txt");
+                if (!File.Exists(LogFilePath))
+                {
+                    File.Create(LogFilePath);
+                }
+
+            }
+        }
+        private void SetFirstLogDirectory()
+        {
+            string EXEPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            string EXEDirectory = Path.GetDirectoryName(EXEPath)!;
+            string LogDirectory = Path.Combine(EXEDirectory, "logs");
+            if (!Directory.Exists(LogDirectory))
+            {
+                Directory.CreateDirectory(LogDirectory);
+            }
+
+            LogFilePath = Path.Combine(LogDirectory, "log.txt");
+            if (!File.Exists(LogFilePath))
+            {
+                File.Create(LogFilePath);
+            }
+        }
+
+        private void FileLogPathOpen(object sender, EventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(LogFilePath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to open folder: " + ex.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
             }
         }
     }

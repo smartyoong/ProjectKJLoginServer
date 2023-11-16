@@ -10,10 +10,24 @@ namespace LoginServerAdvanced
         private Socket? ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         private CancellationTokenSource? CancelSocketCancel = new CancellationTokenSource();
         public List<Task> SocketTasks = new List<Task>();
-        public void InitLoginSocket()
+        public bool InitLoginSocket()
         {
-            ListenSocket?.Bind(new IPEndPoint(IPAddress.Any, 11220));
-            ListenSocket?.Listen(1000);
+            try
+            {
+                ListenSocket?.Bind(new IPEndPoint(IPAddress.Any, 11220));
+                ListenSocket?.Listen(1000);
+                return true;
+            }
+            catch(SocketException ex) 
+            {
+                string[] lines = ex.StackTrace!.Split('\n');
+                foreach (string line in lines)
+                {
+                    LoginServer.LogItemAddTime(line);
+                }
+                LoginServer.LogItemAddTime(ex.Message);
+                return false;
+            }
         }
         public async Task Run()
         {
@@ -139,9 +153,23 @@ namespace LoginServerAdvanced
     {
         private bool Disposed = false;
         private Socket? GameConnectSocket;
-        public void InitGameSocket()
+        public bool InitGameSocket()
         {
-            GameConnectSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                GameConnectSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                return true;
+            }
+            catch (Exception ex) 
+            {
+                string[] lines = ex.StackTrace!.Split('\n');
+                foreach (string line in lines)
+                {
+                    LoginServer.LogItemAddTime(line);
+                }
+                LoginServer.LogItemAddTime(ex.Message);
+                return false;
+            }
         }
         public void Dispose()
         {

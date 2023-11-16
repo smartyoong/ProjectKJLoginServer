@@ -9,12 +9,13 @@ namespace LoginServerAdvanced
         private string SQLConnectString = string.Format("Server={0};Database={1};Integrated Security=SSPI;Encrypt=false;", "SMARTYOONG\\SQLEXPRESS", "AccountDB");
         private bool Disposed = false;
 
-        public void InitDataBase()
+        public bool InitDataBase()
         {
             AccountDBConnect = new SqlConnection(SQLConnectString);
             try
             {
                 AccountDBConnect.Open();
+                return true;
             }
             catch (Exception ex)
             {
@@ -25,6 +26,7 @@ namespace LoginServerAdvanced
                     LoginServer.LogItemAddTime(line);
                 }
                 LoginServer.LogItemAddTime(ex.Message);
+                return false;
             }
         }
         public void Dispose()
