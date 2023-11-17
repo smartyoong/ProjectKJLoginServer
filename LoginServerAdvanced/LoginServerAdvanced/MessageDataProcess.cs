@@ -4,26 +4,22 @@ using System.Net.Sockets;
 
 namespace LoginServerAdvanced
 {
-    public static class MessageDataProcess
+    public class MessageDataProcess : IDisposable
     {
-        private static BlockingCollection<LoginMessagePacket>? LoginMessageQueue = new BlockingCollection<LoginMessagePacket>();
-        private static CancellationTokenSource CancelProgress = new CancellationTokenSource();
-        private static LoginDataBase? LoginDBSocket;
+        private BlockingCollection<LoginMessagePacket>? LoginMessageQueue;
+        private CancellationTokenSource? CancelProgress;
+        private LoginDataBase? LoginDBSocket; // 얘는 Dispose 여기서 시키면 안됨
+        private bool Disposed = false;
 
-        public static bool Init(LoginDataBase LoginDB)
+        public bool Init(LoginDataBase LoginDB)
         {
             if (LoginDB == null) return false;
             LoginDBSocket = LoginDB;
-            if (LoginMessageQueue!.IsCompleted)
-            {
-                LoginMessageQueue.Dispose();
-                LoginMessageQueue = new BlockingCollection<LoginMessagePacket>();
-                CancelProgress.Dispose();
-                CancelProgress = new CancellationTokenSource();
-            }
+            LoginMessageQueue = new BlockingCollection<LoginMessagePacket>();
+            CancelProgress = new CancellationTokenSource();
             return true;
         }
-        public static void BufferToMessageQueue(ref byte[] ReceivedData, Socket Sock)
+        public void BufferToMessageQueue(ref byte[] ReceivedData, Socket Sock)
         {
 
             LoginMessagePacket Msg;
@@ -39,7 +35,7 @@ namespace LoginServerAdvanced
                 MessageBox.Show("Msg is null");
             }
         }
-        private static void ProcessMessage()
+        private void ProcessMessage()
         {
             if (LoginMessageQueue == null) return;
             try
@@ -47,12 +43,15 @@ namespace LoginServerAdvanced
                 while (!LoginMessageQueue.IsCompleted)
                 {
                     LoginMessagePacket? TempPacket = new LoginMessagePacket();
-                    TempPacket = LoginMessageQueue.Take(CancelProgress.Token);
+                    TempPacket = LoginMessageQueue.Take(CancelProgress!.Token);
                     if (TempPacket == null) return;
                     switch (TempPacket.IDNum)
                     {
                         case LOGIN_CLIENT_PACKET_ID.LOGIN_CLIENT_TRY_LOGIN:
                             Callback_SP_Login(TempPacket);
+                            break;
+                        case LOGIN_CLIENT_PACKET_ID.LOGIN_CLIENT_TRY_LOGOUT:
+                            Callback_LogOut(TempPacket);
                             break;
                     }
 
@@ -76,17 +75,17 @@ namespace LoginServerAdvanced
             }
         }
 
-        public static async Task Run()
+        public async Task Run()
         {
             try
             {
                 await Task.Run(() =>
                 {
-                    while (!CancelProgress.Token.IsCancellationRequested)
+                    while (!CancelProgress!.Token.IsCancellationRequested)
                     {
                         ProcessMessage();
                     }
-                }, CancelProgress.Token);
+                }, CancelProgress!.Token);
             }
             catch (OperationCanceledException ex)
             {
@@ -103,13 +102,30 @@ namespace LoginServerAdvanced
             }
         }
 
-        public static void Cancel()
+        public void Cancel()
         {
-            CancelProgress.Cancel();
+            CancelProgress!.Cancel();
             LoginMessageQueue?.CompleteAdding();
         }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-        private static void Callback_SP_Login(LoginMessagePacket Packet)
+        protected virtual void Dispose(bool IsDisposing)
+        {
+            // 중복 실행 방지
+            if (Disposed)
+                return;
+            if (IsDisposing)
+            {
+                CancelProgress?.Dispose();
+            }
+            LoginMessageQueue!.Dispose();
+            Disposed = true;
+        }
+        private void Callback_SP_Login(LoginMessagePacket Packet)
         {
             int ErrorValue = (int)ERROR_CODE.ERR_NULL_VALUE;
             string NickName = string.Empty;
@@ -118,6 +134,7 @@ namespace LoginServerAdvanced
             LoginSendToClientMessagePacket? TempPacket = new LoginSendToClientMessagePacket();
             TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_LOGIN_RESULT;
             TempPacket.IntegerValue1 = ErrorValue;
+            TempPacket.StringValue1 = NickName;
             byte[] DataBytes;
             DataBytes = SocketDataSerializer.Serialize(TempPacket);
             Packet.ResponeSocket?.Send(DataBytes);
@@ -130,6 +147,15 @@ namespace LoginServerAdvanced
                     LoginServer.LogItemAddTime($"{NickName}님이 접속하셨습니다. {RemoteEndPoint.Address}");
                 }
             }
+        }
+        private void Callback_LogOut(LoginMessagePacket Packet)
+        {
+            LoginSendToClientMessagePacket? TempPacket = new LoginSendToClientMessagePacket();
+            TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_LOGOUT_RESULT;
+            TempPacket.IntegerValue1 = LoginCore.DeleteUserOnDictionary(Packet.StringValue1);
+            byte[] DataBytes;
+            DataBytes = SocketDataSerializer.Serialize(TempPacket);
+            Packet.ResponeSocket?.Send(DataBytes);
         }
     }
 }

@@ -13,19 +13,21 @@ namespace LoginServerAdvanced
     {
         private static Dictionary<string, Socket>? LoginUsers = new Dictionary<string, Socket>(); // <닉네임,소켓>
         private bool IsServerRun = false;
-        LoginDataBase? LoginDB = new LoginDataBase();
-        GameSocket? GameSock = new GameSocket();
+        LoginDataBase? LoginDB;
+        GameSocket? GameSock;
         LoginSocket? LoginSock;
         Task? LoginSocketTask;
         Task? MessageDataProcessTask;
+        MessageDataProcess? PacketProccessor;
 
         public bool InitLoginServer()
         {
             LoginDB = new LoginDataBase();
             GameSock = new GameSocket();
             LoginSock = new LoginSocket();
+            PacketProccessor = new MessageDataProcess();
             ThreadPool.SetMaxThreads(4, 4);
-            if(!LoginSock.InitLoginSocket())
+            if(!LoginSock.InitLoginSocket(PacketProccessor))
                 return false;
             if(!LoginDB.InitDataBase())
                 return false;
@@ -33,7 +35,7 @@ namespace LoginServerAdvanced
                 return false;
             if (LoginDB != null)
             {
-                if (!MessageDataProcess.Init(LoginDB))
+                if (!PacketProccessor.Init(LoginDB))
                     return false;
             }
             else
@@ -50,10 +52,13 @@ namespace LoginServerAdvanced
             try
             {
                 LoginSocketTask = LoginSock?.Run();
-                MessageDataProcessTask = MessageDataProcess.Run();
-                await Task.WhenAll(LoginSocketTask!, MessageDataProcessTask);
+                MessageDataProcessTask = PacketProccessor?.Run();
+                await Task.WhenAll(LoginSocketTask!, MessageDataProcessTask!);
                 LoginSock!.Dispose();
+                GameSock!.Dispose();
+                LoginDB?.Dispose();
                 MessageDataProcessTask!.Dispose();
+                PacketProccessor!.Dispose();
                 LoginServer.LogItemAddTime("서버 객체 삭제 완료.");
                 LoginServer.LogItemAddTime("서버가 종료되었습니다.");
                 IsServerRun = false;
@@ -81,7 +86,7 @@ namespace LoginServerAdvanced
             if(IsServerRun)
             {
                 LoginSock?.Cancel();
-                MessageDataProcess.Cancel();
+                PacketProccessor?.Cancel();
             }
         }
 
@@ -118,6 +123,19 @@ namespace LoginServerAdvanced
             }
             else
                 return string.Empty;
+        }
+        public static int DeleteUserOnDictionary(string NickName)
+        {
+            if (LoginUsers!.ContainsKey(NickName))
+            {
+                LoginUsers!.Remove(NickName);
+                LoginServer.LogItemAddTime($"{NickName}님이 로그아웃 하셨습니다.");
+                return 0;
+            }
+            else
+            {
+                return 1;
+            }
         }
     }
 }

@@ -10,12 +10,14 @@ namespace LoginServerAdvanced
         private Socket? ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         private CancellationTokenSource? CancelSocketCancel = new CancellationTokenSource();
         public List<Task> SocketTasks = new List<Task>();
-        public bool InitLoginSocket()
+        private MessageDataProcess? PacketQueue; // 얘는 여기서 Dispose 시키면안됨
+        public bool InitLoginSocket(MessageDataProcess PacketQueuClass)
         {
             try
             {
                 ListenSocket?.Bind(new IPEndPoint(IPAddress.Any, 11220));
                 ListenSocket?.Listen(1000);
+                PacketQueue = PacketQueuClass;
                 return true;
             }
             catch(SocketException ex) 
@@ -82,7 +84,7 @@ namespace LoginServerAdvanced
                     {
                         return;
                     }
-                    MessageDataProcess.BufferToMessageQueue(ref buffer, Sock);
+                    PacketQueue!.BufferToMessageQueue(ref buffer, Sock);
                 }
             }
             catch(SocketException ex)
@@ -115,9 +117,9 @@ namespace LoginServerAdvanced
                 if (RemoteEndPoint != null)
                 {
                     if(LoginCore.FindNickNameBySocket(Sock) != string.Empty)
-                        LoginServer.LogItemAddTime($"{LoginCore.FindNickNameBySocket(Sock)} {RemoteEndPoint.Address} 님이 로그아웃 하였습니다");
+                        LoginServer.LogItemAddTime($"{LoginCore.FindNickNameBySocket(Sock)} {RemoteEndPoint.Address} 님이 연결 종료 하였습니다");
                     else
-                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} (로그인 혹은 회원가입하지 않음) 님이 로그아웃 하였습니다");
+                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} (로그인 혹은 회원가입하지 않음) 님이 연결 종료 하였습니다");
                 }
                 Sock.Close();
 
@@ -182,11 +184,6 @@ namespace LoginServerAdvanced
             // 중복 실행 방지
             if (Disposed)
                 return;
-            if (IsDisposing)
-            {
-                // 관리 리소스 해제
-            }
-            // 비관리 리소스 해제
             GameConnectSocket?.Close();
 
             Disposed = true;
