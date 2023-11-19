@@ -58,7 +58,12 @@ namespace LoginServerAdvanced
                 {
                     // 임시
                     case MS_SQL_SP_ID.SP_LOGIN:
-                        Packet.GetHashCode();
+                        break;
+                    case MS_SQL_SP_ID.SP_REGIST_ACCOUNT: 
+                        Packet.GetHashCode(); 
+                        break;
+                    case MS_SQL_SP_ID.SP_ID_UNIQUE_CHECK:
+                        Function_SP_ID_UniqueCheck(Packet);
                         break;
                 }
             }
@@ -84,6 +89,11 @@ namespace LoginServerAdvanced
                 {
                     case MS_SQL_SP_ID.SP_LOGIN:
                         ReturnValue = Function_SP_Login(Packet, out StringOutPutParameter!);
+                        break;
+                    case MS_SQL_SP_ID.SP_REGIST_ACCOUNT:
+                        Packet.GetHashCode();
+                        break;
+                    case MS_SQL_SP_ID.SP_ID_UNIQUE_CHECK:
                         break;
                 }
             }
@@ -115,6 +125,19 @@ namespace LoginServerAdvanced
             Command.ExecuteNonQuery();
             NickNameNullCheck = NickNameParameter.Value;
             StringOuPutParameter = NickNameNullCheck != DBNull.Value ? (string)NickNameNullCheck : null;
+            ReturnValue = (int)OutPutParameter.Value;
+            return ReturnValue;
+        }
+        private int Function_SP_ID_UniqueCheck(LoginMessagePacket Packet)
+        {
+            int ReturnValue = 99999; // Error
+            SqlCommand Command = new SqlCommand("SP_ID_Unique_Check", AccountDBConnect);
+            Command.CommandType = CommandType.StoredProcedure;
+            Command.Parameters.AddWithValue("@ID", Packet.StringValue1);
+            SqlParameter OutPutParameter = new SqlParameter("@ErrorCode", SqlDbType.Int);
+            OutPutParameter.Direction = ParameterDirection.ReturnValue;
+            Command.Parameters.Add(OutPutParameter);
+            Command.ExecuteNonQuery();
             ReturnValue = (int)OutPutParameter.Value;
             return ReturnValue;
         }
