@@ -6,13 +6,13 @@ namespace LoginServerAdvanced
     {
         private LoginCore LoginServerCore = new LoginCore();
         private static string LogFilePath = string.Empty;
+        private static StreamWriter? LogFileStream;
 
         public LoginServer()
         {
             InitializeComponent();
             LoginServerLogList.HorizontalScrollbar = true;
             InfoVersionViewListBox.BackColor = Color.Red;
-            SetFirstLogDirectory();
         }
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
@@ -23,6 +23,7 @@ namespace LoginServerAdvanced
                 SystemSounds.Beep.Play();
                 if (MessageBox.Show("서버를 시작하시겠습니까?", "시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
+                    SetFirstLogDirectory();
                     LogItemAddTime("서버를 시작합니다.");
                     if (!LoginServerCore.InitLoginServer())
                     {
@@ -44,7 +45,8 @@ namespace LoginServerAdvanced
             }
             else
                 LoginServerLogList.Items.Add(Temp);
-            File.AppendAllText(LogFilePath, Temp + Environment.NewLine);
+            LogFileStream!.WriteLine(Temp);
+            LogFileStream.Flush();
         }
 
         private void ServerStopButton_Click(object sender, EventArgs e)
@@ -66,6 +68,7 @@ namespace LoginServerAdvanced
                     InfoVersionViewListBox.BackColor = Color.Yellow;
                     // 비동기적으로 소켓이 정리되기도 전에 바로 재생성되는것을 방지
                     await Task.Delay(10000);
+                    SetFirstLogDirectory();
                     LogItemAddTime("서버를 시작합니다.");
                     LoginServerCore.InitLoginServer();
                     LoginServerCore.Run();
@@ -79,6 +82,7 @@ namespace LoginServerAdvanced
                 SystemSounds.Beep.Play();
                 if (MessageBox.Show("서버를 시작하시겠습니까?", "시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
+                    SetFirstLogDirectory();
                     LogItemAddTime("서버를 시작합니다.");
                     LoginServerCore.InitLoginServer();
                     LoginServerCore.Run();
@@ -104,10 +108,18 @@ namespace LoginServerAdvanced
             if (FolderBrowserDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 string FolderPath = FolderBrowserDialog.SelectedPath;
-                LogFilePath = Path.Combine(FolderPath, "log.txt");
+                DateTime CurrentTime = DateTime.Now;
+                string FormattedTime = CurrentTime.ToString("yyyy-MM-dd-HH-mm-ss");
+                LogFilePath = Path.Combine(FolderPath, $"LOG{FormattedTime}.txt");
                 if (!File.Exists(LogFilePath))
                 {
-                    File.Create(LogFilePath);
+                    File.Create(LogFilePath).Close();
+                    if (LogFileStream != null)
+                    {
+                        LogFileStream.Close();
+                        LogFileStream = null;
+                    }
+                    LogFileStream = new StreamWriter(LogFilePath, true);
                 }
 
             }
@@ -116,16 +128,24 @@ namespace LoginServerAdvanced
         {
             string EXEPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
             string EXEDirectory = Path.GetDirectoryName(EXEPath)!;
-            string LogDirectory = Path.Combine(EXEDirectory, "logs");
+            DateTime CurrentTime = DateTime.Now;
+            string FormattedTime = CurrentTime.ToString("yyyy-MM-dd-HH-mm-ss");
+            string LogDirectory = Path.Combine(EXEDirectory, $"Logs");
             if (!Directory.Exists(LogDirectory))
             {
                 Directory.CreateDirectory(LogDirectory);
             }
 
-            LogFilePath = Path.Combine(LogDirectory, "log.txt");
+            LogFilePath = Path.Combine(LogDirectory, $"LOG{FormattedTime}.txt");
             if (!File.Exists(LogFilePath))
             {
-                File.Create(LogFilePath);
+                File.Create(LogFilePath).Close();
+                if(LogFileStream != null)
+                {
+                    LogFileStream.Close();
+                    LogFileStream = null;
+                }
+                LogFileStream = new StreamWriter(LogFilePath, true);
             }
         }
 

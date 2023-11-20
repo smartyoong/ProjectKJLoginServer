@@ -63,7 +63,7 @@ namespace LoginServerAdvanced
                         Packet.GetHashCode(); 
                         break;
                     case MS_SQL_SP_ID.SP_ID_UNIQUE_CHECK:
-                        Function_SP_ID_UniqueCheck(Packet);
+                        ReturnValue = Function_SP_ID_UniqueCheck(Packet);
                         break;
                 }
             }
