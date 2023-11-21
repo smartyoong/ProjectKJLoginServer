@@ -134,24 +134,37 @@ namespace LoginServerAdvanced
         private void Callback_SP_Login(LoginMessagePacket Packet)
         {
             int ErrorValue = (int)ERROR_CODE.ERR_NULL_VALUE;
-            string NickName = string.Empty;
-            if(LoginDBSocket != null)
-                ErrorValue = LoginDBSocket.SPCall(MS_SQL_SP_ID.SP_LOGIN, Packet, out NickName);
-            LoginSendToClientMessagePacket? TempPacket = new LoginSendToClientMessagePacket();
-            TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_LOGIN_RESULT;
-            TempPacket.IntegerValue1 = ErrorValue;
-            TempPacket.StringValue1 = NickName;
-            byte[] DataBytes;
-            DataBytes = SocketDataSerializer.Serialize(TempPacket);
-            Packet.ResponeSocket?.Send(DataBytes);
-            if(ErrorValue == 2)
+            if(LoginCore.FindNickNameBySocket(Packet.ResponeSocket!) != string.Empty)
             {
-                LoginCore.AddLoginUsers(NickName, Packet.ResponeSocket!);
-                IPEndPoint? RemoteEndPoint = Packet.ResponeSocket!.RemoteEndPoint as IPEndPoint;
-                if (RemoteEndPoint != null)
+                string NickName = string.Empty;
+                if (LoginDBSocket != null)
+                    ErrorValue = LoginDBSocket.SPCall(MS_SQL_SP_ID.SP_LOGIN, Packet, out NickName);
+                LoginSendToClientMessagePacket? TempPacket = new LoginSendToClientMessagePacket();
+                TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_LOGIN_RESULT;
+                TempPacket.IntegerValue1 = ErrorValue;
+                TempPacket.StringValue1 = NickName;
+                byte[] DataBytes;
+                DataBytes = SocketDataSerializer.Serialize(TempPacket);
+                Packet.ResponeSocket?.Send(DataBytes);
+                if (ErrorValue == 2)
                 {
-                    LoginServer.LogItemAddTime($"{NickName}님이 접속하셨습니다. {RemoteEndPoint.Address}");
+                    LoginCore.AddLoginUsers(NickName, Packet.ResponeSocket!);
+                    IPEndPoint? RemoteEndPoint = Packet.ResponeSocket!.RemoteEndPoint as IPEndPoint;
+                    if (RemoteEndPoint != null)
+                    {
+                        LoginServer.LogItemAddTime($"{NickName}님이 접속하셨습니다. {RemoteEndPoint.Address}");
+                    }
                 }
+            }
+            else
+            {
+                ErrorValue = 3; // 이미 로그인됨
+                LoginSendToClientMessagePacket? TempPacket = new LoginSendToClientMessagePacket();
+                TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_LOGIN_RESULT;
+                TempPacket.IntegerValue1 = ErrorValue;
+                byte[] DataBytes;
+                DataBytes = SocketDataSerializer.Serialize(TempPacket);
+                Packet.ResponeSocket?.Send(DataBytes);
             }
         }
         private void Callback_LogOut(LoginMessagePacket Packet)
