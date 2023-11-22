@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Net;
 
 namespace LoginServerAdvanced
 {
@@ -59,8 +60,8 @@ namespace LoginServerAdvanced
                     // 임시
                     case MS_SQL_SP_ID.SP_LOGIN:
                         break;
-                    case MS_SQL_SP_ID.SP_REGIST_ACCOUNT: 
-                        Packet.GetHashCode(); 
+                    case MS_SQL_SP_ID.SP_REGIST_ACCOUNT:
+                        ReturnValue = Function_SP_RegistAccount(Packet);
                         break;
                     case MS_SQL_SP_ID.SP_ID_UNIQUE_CHECK:
                         ReturnValue = Function_SP_ID_UniqueCheck(Packet);
@@ -125,6 +126,27 @@ namespace LoginServerAdvanced
             Command.ExecuteNonQuery();
             NickNameNullCheck = NickNameParameter.Value;
             StringOuPutParameter = NickNameNullCheck != DBNull.Value ? (string)NickNameNullCheck : null;
+            ReturnValue = (int)OutPutParameter.Value;
+            return ReturnValue;
+        }
+        private int Function_SP_RegistAccount(LoginMessagePacket Packet)
+        {
+            int ReturnValue = 99999; // Error
+            SqlCommand Command = new SqlCommand("SP_RegistAccount", AccountDBConnect);
+            Command.CommandType = CommandType.StoredProcedure;
+            Command.Parameters.AddWithValue("@ID", Packet.StringValue1);
+            Command.Parameters.AddWithValue("@PW", Packet.StringValue2);
+            IPEndPoint? RemoteEndPoint = Packet.ResponeSocket!.RemoteEndPoint as IPEndPoint;
+            if (RemoteEndPoint == null)
+            {
+                LoginServer.LogItemAddTime($"{Packet.StringValue1}회원 가입 실패, IP가 없음");
+                return ReturnValue;
+            }
+            Command.Parameters.AddWithValue("@IP", RemoteEndPoint!.Address.ToString());
+            SqlParameter OutPutParameter = new SqlParameter("@ErrorCode", SqlDbType.Int);
+            OutPutParameter.Direction = ParameterDirection.ReturnValue;
+            Command.Parameters.Add(OutPutParameter);
+            Command.ExecuteNonQuery();
             ReturnValue = (int)OutPutParameter.Value;
             return ReturnValue;
         }

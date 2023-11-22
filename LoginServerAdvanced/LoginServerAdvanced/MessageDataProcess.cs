@@ -179,23 +179,20 @@ namespace LoginServerAdvanced
         private void Callback_SP_Regist(LoginMessagePacket Packet)
         {
             int ErrorValue = (int)ERROR_CODE.ERR_NULL_VALUE;
-            string NickName = string.Empty;
             if (LoginDBSocket != null)
-                ErrorValue = LoginDBSocket.SPCall(MS_SQL_SP_ID.SP_LOGIN, Packet, out NickName);
+                ErrorValue = LoginDBSocket.SPCall(MS_SQL_SP_ID.SP_REGIST_ACCOUNT, Packet);
             LoginSendToClientMessagePacket? TempPacket = new LoginSendToClientMessagePacket();
-            TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_LOGIN_RESULT;
+            TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_REGIST_RESULT;
             TempPacket.IntegerValue1 = ErrorValue;
-            TempPacket.StringValue1 = NickName;
             byte[] DataBytes;
             DataBytes = SocketDataSerializer.Serialize(TempPacket);
             Packet.ResponeSocket?.Send(DataBytes);
-            if (ErrorValue == 2)
+            if (ErrorValue == 0)
             {
-                LoginCore.AddLoginUsers(NickName, Packet.ResponeSocket!);
                 IPEndPoint? RemoteEndPoint = Packet.ResponeSocket!.RemoteEndPoint as IPEndPoint;
                 if (RemoteEndPoint != null)
                 {
-                    LoginServer.LogItemAddTime($"{NickName}님이 접속하셨습니다. {RemoteEndPoint.Address}");
+                    LoginServer.LogItemAddTime($"{Packet.StringValue1} {RemoteEndPoint.Address}님이 회원가입 하였습니다");
                 }
             }
         }
