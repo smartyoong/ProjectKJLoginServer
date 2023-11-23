@@ -134,7 +134,7 @@ namespace LoginServerAdvanced
         private void Callback_SP_Login(LoginMessagePacket Packet)
         {
             int ErrorValue = (int)ERROR_CODE.ERR_NULL_VALUE;
-            if(LoginCore.FindNickNameBySocket(Packet.ResponeSocket!) != string.Empty)
+            if(string.IsNullOrEmpty(LoginCore.FindNickNameBySocket(Packet.ResponeSocket!)))
             {
                 string NickName = string.Empty;
                 if (LoginDBSocket != null)

@@ -116,7 +116,7 @@ namespace LoginServerAdvanced
                 IPEndPoint? RemoteEndPoint = Sock.RemoteEndPoint as IPEndPoint;
                 if (RemoteEndPoint != null)
                 {
-                    if(LoginCore.FindNickNameBySocket(Sock) != string.Empty)
+                    if(string.IsNullOrEmpty(LoginCore.FindNickNameBySocket(Sock)))
                         LoginServer.LogItemAddTime($"{LoginCore.FindNickNameBySocket(Sock)} {RemoteEndPoint.Address} 님이 연결 종료 하였습니다");
                     else
                         LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} (로그인 혹은 회원가입하지 않음) 님이 연결 종료 하였습니다");

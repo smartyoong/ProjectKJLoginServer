@@ -153,7 +153,7 @@ namespace LoginServerAdvanced
         {
             try
             {
-                System.Diagnostics.Process.Start(LogFilePath);
+                System.Diagnostics.Process.Start("Notepad.exe",LogFilePath);
             }
             catch (Exception ex)
             {
