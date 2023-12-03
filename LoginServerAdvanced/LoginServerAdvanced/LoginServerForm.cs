@@ -1,4 +1,6 @@
+using LoginServerAdvanced.Properties;
 using System.Media;
+using System.Runtime.CompilerServices;
 
 namespace LoginServerAdvanced
 {
@@ -7,12 +9,18 @@ namespace LoginServerAdvanced
         private LoginCore LoginServerCore = new LoginCore();
         private static string LogFilePath = string.Empty;
         private static StreamWriter? LogFileStream;
+        private int ConnectedUsers = 0;
+        private event Action ConnectedUserChangeEvent;
 
         public LoginServer()
         {
             InitializeComponent();
             LoginServerLogList.HorizontalScrollbar = true;
             InfoVersionViewListBox.BackColor = Color.Red;
+            RenewUserCount();
+            ConnectedUserChangeEvent += RenewUserCount;
+            LoginServerCore.MainForm = this;
+            LogFilePath = Settings.Default.LogDirectory;
         }
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
@@ -23,7 +31,10 @@ namespace LoginServerAdvanced
                 SystemSounds.Beep.Play();
                 if (MessageBox.Show("서버를 시작하시겠습니까?", "시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
-                    SetFirstLogDirectory();
+                    if(string.IsNullOrEmpty(Settings.Default.LogDirectory))
+                        SetFirstLogDirectory();
+                    else
+                        UseDefaultLogDirectory();
                     LogItemAddTime("서버를 시작합니다.");
                     if (!LoginServerCore.InitLoginServer())
                     {
@@ -68,7 +79,10 @@ namespace LoginServerAdvanced
                     InfoVersionViewListBox.BackColor = Color.Yellow;
                     // 비동기적으로 소켓이 정리되기도 전에 바로 재생성되는것을 방지
                     await Task.Delay(10000);
-                    SetFirstLogDirectory();
+                    if (string.IsNullOrEmpty(Settings.Default.LogDirectory))
+                        SetFirstLogDirectory();
+                    else
+                        UseDefaultLogDirectory();
                     LogItemAddTime("서버를 시작합니다.");
                     LoginServerCore.InitLoginServer();
                     LoginServerCore.Run();
@@ -82,7 +96,10 @@ namespace LoginServerAdvanced
                 SystemSounds.Beep.Play();
                 if (MessageBox.Show("서버를 시작하시겠습니까?", "시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
-                    SetFirstLogDirectory();
+                    if (string.IsNullOrEmpty(Settings.Default.LogDirectory))
+                        SetFirstLogDirectory();
+                    else
+                        UseDefaultLogDirectory();
                     LogItemAddTime("서버를 시작합니다.");
                     LoginServerCore.InitLoginServer();
                     LoginServerCore.Run();
@@ -103,7 +120,7 @@ namespace LoginServerAdvanced
 
         private void SetFileLogDirectory(object sender, EventArgs e)
         {
-            System.Windows.Forms.FolderBrowserDialog FolderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
+            FolderBrowserDialog FolderBrowserDialog = new FolderBrowserDialog();
 
             if (FolderBrowserDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
@@ -121,7 +138,8 @@ namespace LoginServerAdvanced
                     }
                     LogFileStream = new StreamWriter(LogFilePath, true);
                 }
-
+                Settings.Default.LogDirectory = LogFilePath;
+                Settings.Default.Save();
             }
         }
         private void SetFirstLogDirectory()
@@ -140,7 +158,7 @@ namespace LoginServerAdvanced
             if (!File.Exists(LogFilePath))
             {
                 File.Create(LogFilePath).Close();
-                if(LogFileStream != null)
+                if (LogFileStream != null)
                 {
                     LogFileStream.Close();
                     LogFileStream = null;
@@ -148,17 +166,45 @@ namespace LoginServerAdvanced
                 LogFileStream = new StreamWriter(LogFilePath, true);
             }
         }
+        private void UseDefaultLogDirectory()
+        {
+            LogFilePath = Settings.Default.LogDirectory;
+            if (!File.Exists(LogFilePath))
+            {
+                File.Create(LogFilePath).Close();
+                if (LogFileStream != null)
+                {
+                    LogFileStream.Close();
+                    LogFileStream = null;
+                }
+            }
+            LogFileStream = new StreamWriter(LogFilePath, true);
+        }
 
         private void FileLogPathOpen(object sender, EventArgs e)
         {
             try
             {
-                System.Diagnostics.Process.Start("Notepad.exe",LogFilePath);
+                System.Diagnostics.Process.Start("Notepad.exe", LogFilePath);
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Failed to open folder: " + ex.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
             }
+        }
+        private void RenewUserCount()
+        {
+            ConnectUserTextBox.Text = ConnectedUsers.ToString();
+        }
+        public void IncreaseUserCount()
+        {
+            ConnectedUsers++;
+            ConnectedUserChangeEvent.Invoke();
+        }
+        public void DecreaseUserCount()
+        {
+            ConnectedUsers--;
+            ConnectedUserChangeEvent.Invoke();
         }
     }
 }

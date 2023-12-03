@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using LoginServerAdvanced.Properties;
 
 namespace LoginServerAdvanced
 {
@@ -11,11 +12,12 @@ namespace LoginServerAdvanced
         private CancellationTokenSource? CancelSocketCancel = new CancellationTokenSource();
         public List<Task> SocketTasks = new List<Task>();
         private MessageDataProcess? PacketQueue; // 얘는 여기서 Dispose 시키면안됨
+        public LoginServer? MainForm { get; set; }
         public bool InitLoginSocket(MessageDataProcess PacketQueuClass)
         {
             try
             {
-                ListenSocket?.Bind(new IPEndPoint(IPAddress.Any, 11220));
+                ListenSocket?.Bind(new IPEndPoint(IPAddress.Any, Settings.Default.ListenPort));
                 ListenSocket?.Listen(1000);
                 PacketQueue = PacketQueuClass;
                 return true;
@@ -40,6 +42,8 @@ namespace LoginServerAdvanced
                 {
                     if (ListenSocket == null) return;
                     Socket ClientSocket = await ListenSocket.AcceptAsync(CancelSocketCancel.Token);
+                    if(MainForm != null)
+                        MainForm.IncreaseUserCount();
                     SocketTasks.Add(Task.Run(() => RecvData(ClientSocket), CancelSocketCancel.Token));
                 }
             }
@@ -121,6 +125,8 @@ namespace LoginServerAdvanced
                     else
                         LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} (로그인 혹은 회원가입하지 않음) 님이 연결 종료 하였습니다");
                 }
+                if (MainForm != null)
+                    MainForm.DecreaseUserCount();
                 Sock.Close();
 
             }
@@ -151,7 +157,7 @@ namespace LoginServerAdvanced
         }
     }
 
-    public class GameSocket : IDisposable
+    public class GameGateSocket : IDisposable
     {
         private bool Disposed = false;
         private Socket? GameConnectSocket;

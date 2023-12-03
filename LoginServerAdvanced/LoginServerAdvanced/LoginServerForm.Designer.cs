@@ -37,6 +37,8 @@
             파일로그ToolStripMenuItem = new ToolStripMenuItem();
             디렉토리설정ToolStripMenuItem = new ToolStripMenuItem();
             로그파일열기ToolStripMenuItem = new ToolStripMenuItem();
+            label1 = new Label();
+            ConnectUserTextBox = new TextBox();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -54,9 +56,9 @@
             // 
             InfoVersionViewListBox.FormattingEnabled = true;
             InfoVersionViewListBox.ItemHeight = 15;
-            InfoVersionViewListBox.Location = new Point(12, 362);
+            InfoVersionViewListBox.Location = new Point(12, 407);
             InfoVersionViewListBox.Name = "InfoVersionViewListBox";
-            InfoVersionViewListBox.Size = new Size(834, 109);
+            InfoVersionViewListBox.Size = new Size(834, 64);
             InfoVersionViewListBox.TabIndex = 1;
             // 
             // ServerStartButton
@@ -114,22 +116,42 @@
             // 디렉토리설정ToolStripMenuItem
             // 
             디렉토리설정ToolStripMenuItem.Name = "디렉토리설정ToolStripMenuItem";
-            디렉토리설정ToolStripMenuItem.Size = new Size(180, 22);
+            디렉토리설정ToolStripMenuItem.Size = new Size(154, 22);
             디렉토리설정ToolStripMenuItem.Text = "디렉토리 설정";
             디렉토리설정ToolStripMenuItem.Click += SetFileLogDirectory;
             // 
             // 로그파일열기ToolStripMenuItem
             // 
             로그파일열기ToolStripMenuItem.Name = "로그파일열기ToolStripMenuItem";
-            로그파일열기ToolStripMenuItem.Size = new Size(180, 22);
+            로그파일열기ToolStripMenuItem.Size = new Size(154, 22);
             로그파일열기ToolStripMenuItem.Text = "로그 파일 열기";
             로그파일열기ToolStripMenuItem.Click += FileLogPathOpen;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(12, 368);
+            label1.Name = "label1";
+            label1.Size = new Size(70, 15);
+            label1.TabIndex = 6;
+            label1.Text = "동접자 수 : ";
+            // 
+            // ConnectUserTextBox
+            // 
+            ConnectUserTextBox.Location = new Point(88, 365);
+            ConnectUserTextBox.Name = "ConnectUserTextBox";
+            ConnectUserTextBox.ReadOnly = true;
+            ConnectUserTextBox.Size = new Size(100, 23);
+            ConnectUserTextBox.TabIndex = 7;
+            ConnectUserTextBox.TextAlign = HorizontalAlignment.Right;
             // 
             // LoginServer
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(858, 498);
+            Controls.Add(ConnectUserTextBox);
+            Controls.Add(label1);
             Controls.Add(ServerReSetButton);
             Controls.Add(ServerStopButton);
             Controls.Add(ServerStartButton);
@@ -155,6 +177,8 @@
         private ToolStripMenuItem 파일로그ToolStripMenuItem;
         private ToolStripMenuItem 디렉토리설정ToolStripMenuItem;
         private ToolStripMenuItem 로그파일열기ToolStripMenuItem;
+        private Label label1;
+        private TextBox ConnectUserTextBox;
         private static ListBox LoginServerLogList;
     }
 }

@@ -14,16 +14,17 @@ namespace LoginServerAdvanced
         private static Dictionary<string, Socket>? LoginUsers = new Dictionary<string, Socket>(); // <닉네임,소켓>
         private bool IsServerRun = false;
         LoginDataBase? LoginDB;
-        GameSocket? GameSock;
+        GameGateSocket? GameSock;
         LoginSocket? LoginSock;
         Task? LoginSocketTask;
         Task? MessageDataProcessTask;
         MessageDataProcess? PacketProccessor;
+        public LoginServer? MainForm { get; set; }
 
         public bool InitLoginServer()
         {
             LoginDB = new LoginDataBase();
-            GameSock = new GameSocket();
+            GameSock = new GameGateSocket();
             LoginSock = new LoginSocket();
             PacketProccessor = new MessageDataProcess();
             ThreadPool.SetMaxThreads(4, 4);
@@ -41,6 +42,8 @@ namespace LoginServerAdvanced
             else
                 MessageBox.Show("서버 초기화 실패","서버 초기화 실패",MessageBoxButtons.OK, MessageBoxIcon.Error);
             IsServerRun = true;
+            PacketProccessor.MainForm = this.MainForm;
+            LoginSock.MainForm = this.MainForm;
             return true;
         }
         public bool IsServerOn()

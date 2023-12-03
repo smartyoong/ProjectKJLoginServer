@@ -10,6 +10,11 @@ namespace LoginServerAdvanced
         private CancellationTokenSource? CancelProgress;
         private LoginDataBase? LoginDBSocket; // 얘는 Dispose 여기서 시키면 안됨
         private bool Disposed = false;
+        public LoginServer? MainForm
+        {
+            get; 
+            set;
+        }
 
         public bool Init(LoginDataBase LoginDB)
         {
