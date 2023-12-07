@@ -31,9 +31,15 @@ namespace LoginServerAdvanced
             if(!LoginSock.InitLoginSocket(PacketProccessor))
                 return false;
             if(!LoginDB.InitDataBase())
+            {
+                MainForm!.SetDBConnectSucces(false);
                 return false;
+            }
             if (!GameSock.InitGameSocket())
+            {
+                MainForm!.SetGateServerSuccess(false);
                 return false;
+            }
             if (LoginDB != null)
             {
                 if (!PacketProccessor.Init(LoginDB))
@@ -44,6 +50,8 @@ namespace LoginServerAdvanced
             IsServerRun = true;
             PacketProccessor.MainForm = this.MainForm;
             LoginSock.MainForm = this.MainForm;
+            MainForm!.SetDBConnectSucces(true);
+            MainForm!.SetGateServerSuccess(true);
             return true;
         }
         public bool IsServerOn()

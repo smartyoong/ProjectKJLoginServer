@@ -21,6 +21,8 @@ namespace LoginServerAdvanced
             ConnectedUserChangeEvent += RenewUserCount;
             LoginServerCore.MainForm = this;
             LogFilePath = Settings.Default.LogDirectory;
+            InfoVersionViewListBox.Items.Add("DB 연결전");
+            InfoVersionViewListBox.Items.Add("Gate Server 연결전");
         }
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
@@ -63,6 +65,7 @@ namespace LoginServerAdvanced
         private void ServerStopButton_Click(object sender, EventArgs e)
         {
             LoginServerCore.ShutDownServerCore();
+            SetAllConnectReset();
             InfoVersionViewListBox.BackColor = Color.Red;
         }
 
@@ -73,6 +76,7 @@ namespace LoginServerAdvanced
                 SystemSounds.Beep.Play();
                 if (MessageBox.Show("서버를 다시 시작하시겠습니까?", "재시작", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
+                    SetAllConnectReset();
                     InfoVersionViewListBox.BackColor = Color.Red;
                     LoginServerCore.ShutDownServerCore();
                     LogItemAddTime("서버를 다시 시작하기 위해 준비합니다.");
@@ -206,6 +210,34 @@ namespace LoginServerAdvanced
             ConnectedUsers--;
             ConnectedUserChangeEvent.Invoke();
         }
+        public void SetDBConnectSucces(bool IsSuccess)
+        {
+            if(IsSuccess)
+            {
+                InfoVersionViewListBox.Items[0] = "DB 연결 성공";
+            }
+            else
+            {
+                InfoVersionViewListBox.Items[0] = "DB 연결 실패";
+            }
+        }
+        public void SetGateServerSuccess( bool IsSuccess)
+        {
+            if(IsSuccess)
+            {
+                InfoVersionViewListBox.Items[1] = "GateServer 연결 성공";
+            }
+            else
+            {
+                InfoVersionViewListBox.Items[1] = "GateServer 연결 실패";
+            }
+        }
+        public void SetAllConnectReset()
+        {
+            InfoVersionViewListBox.Items[0] = "DB 연결전";
+            InfoVersionViewListBox.Items[1] = "GateServer 연결전";
+        }
+
     }
 }
 
