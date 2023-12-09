@@ -43,5 +43,23 @@ namespace LoginServerAdvanced.Properties {
                 return ((int)(this["ListenPort"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("115.136.46.23")]
+        public string GateServerAddr {
+            get {
+                return ((string)(this["GateServerAddr"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("11221")]
+        public int GateServerPort {
+            get {
+                return ((int)(this["GateServerPort"]));
+            }
+        }
     }
 }

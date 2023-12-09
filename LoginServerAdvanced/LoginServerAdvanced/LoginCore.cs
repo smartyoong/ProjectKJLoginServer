@@ -18,6 +18,7 @@ namespace LoginServerAdvanced
         LoginSocket? LoginSock;
         Task? LoginSocketTask;
         Task? MessageDataProcessTask;
+        Task? GateServerTask;
         MessageDataProcess? PacketProccessor;
         public LoginServer? MainForm { get; set; }
 
@@ -50,8 +51,8 @@ namespace LoginServerAdvanced
             IsServerRun = true;
             PacketProccessor.MainForm = this.MainForm;
             LoginSock.MainForm = this.MainForm;
+            GameSock.MainForm = this.MainForm;
             MainForm!.SetDBConnectSucces(true);
-            MainForm!.SetGateServerSuccess(true);
             return true;
         }
         public bool IsServerOn()
@@ -64,7 +65,8 @@ namespace LoginServerAdvanced
             {
                 LoginSocketTask = LoginSock?.Run();
                 MessageDataProcessTask = PacketProccessor?.Run();
-                await Task.WhenAll(LoginSocketTask!, MessageDataProcessTask!);
+                GateServerTask = GameSock?.Run();
+                await Task.WhenAll(LoginSocketTask!, MessageDataProcessTask!, GateServerTask!);
                 LoginSock!.Dispose();
                 GameSock!.Dispose();
                 LoginDB?.Dispose();
@@ -98,6 +100,7 @@ namespace LoginServerAdvanced
             {
                 LoginSock?.Cancel();
                 PacketProccessor?.Cancel();
+                GameSock?.Cancel();
             }
         }
 

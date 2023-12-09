@@ -8,5 +8,11 @@
     <Setting Name="ListenPort" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">11220</Value>
     </Setting>
+    <Setting Name="GateServerAddr" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">115.136.46.23</Value>
+    </Setting>
+    <Setting Name="GateServerPort" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">11221</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -161,10 +161,13 @@ namespace LoginServerAdvanced
     {
         private bool Disposed = false;
         private Socket? GameConnectSocket;
+        private CancellationTokenSource? GateCancel;
+        public LoginServer? MainForm { get; set; }
         public bool InitGameSocket()
         {
             try
             {
+                GateCancel = new CancellationTokenSource();
                 GameConnectSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 return true;
             }
@@ -179,6 +182,35 @@ namespace LoginServerAdvanced
                 return false;
             }
         }
+        public async Task Run()
+        {
+            IPAddress GateAddr = IPAddress.Parse(Settings.Default.GateServerAddr);
+            while(!GateCancel!.IsCancellationRequested)
+            {
+                try
+                {
+                    await GameConnectSocket!.ConnectAsync(GateAddr, Settings.Default.GateServerPort);
+                    MainForm!.SetGateServerSuccess(true);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    string[] lines = ex.StackTrace!.Split('\n');
+                    foreach (string line in lines)
+                    {
+                        LoginServer.LogItemAddTime(line);
+                    }
+                    LoginServer.LogItemAddTime(ex.Message);
+                    LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
+                }
+                await Task.Delay(1000,GateCancel.Token);
+            }
+        }
+        public void Cancel()
+        {
+            GateCancel!.Cancel();
+            MainForm!.SetGateServerSuccess(false);
+        }
         public void Dispose()
         {
             Dispose(true);
@@ -191,7 +223,7 @@ namespace LoginServerAdvanced
             if (Disposed)
                 return;
             GameConnectSocket?.Close();
-
+            GateCancel?.Dispose();
             Disposed = true;
         }
     }
