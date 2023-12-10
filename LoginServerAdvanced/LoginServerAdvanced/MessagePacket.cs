@@ -44,7 +44,6 @@ namespace LoginServerAdvanced
         public int IntegerValue1 { get; set; } = 0;
     }
     [Serializable]
-    [StructLayout(LayoutKind.Sequential)]
     public class LoginToGateServer
     {
         public string UserName = string.Empty;

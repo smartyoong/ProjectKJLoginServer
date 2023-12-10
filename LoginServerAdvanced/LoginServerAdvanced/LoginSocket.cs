@@ -186,41 +186,47 @@ namespace LoginServerAdvanced
         public async Task Run()
         {
             IPAddress GateAddr = IPAddress.Parse(Settings.Default.GateServerAddr);
-            while(!GateCancel!.IsCancellationRequested)
+            try
             {
-                if(GameConnectSocket != null && !GameConnectSocket!.Connected)
+                while (!GateCancel!.IsCancellationRequested)
                 {
-                    try
+                    if (GameConnectSocket != null && !GameConnectSocket!.Connected)
                     {
-                        await GameConnectSocket!.ConnectAsync(GateAddr, Settings.Default.GateServerPort);
-                        MainForm!.SetGateServerSuccess(true);
-                        byte[] KeepAlive = new byte[32];
-                        int GateDisconnectCheck = 0;
-                        while(!GateCancel.IsCancellationRequested)
+                        try
                         {
-                            GateDisconnectCheck = await GameConnectSocket.ReceiveAsync(KeepAlive);
-                            if (GateDisconnectCheck <= 0)
+                            await GameConnectSocket!.ConnectAsync(GateAddr, Settings.Default.GateServerPort);
+                            MainForm!.SetGateServerSuccess(true);
+                            byte[] KeepAlive = new byte[32];
+                            int GateDisconnectCheck = 0;
+                            while (!GateCancel.IsCancellationRequested)
                             {
-                                LoginServer.LogItemAddTime("게이트 서버와 연결이 종료되었습니다.");
-                                break;
+                                GateDisconnectCheck = await GameConnectSocket.ReceiveAsync(KeepAlive);
+                                if (GateDisconnectCheck <= 0)
+                                {
+                                    LoginServer.LogItemAddTime("게이트 서버와 연결이 종료되었습니다.");
+                                    break;
+                                }
                             }
+                            GameConnectSocket.Close();
+                            GameConnectSocket = null;
+                            continue; // GateServer Disconnected, So Try ReConnect
                         }
-                        GameConnectSocket.Close();
-                        GameConnectSocket = null;
-                        continue; // GateServer Disconnected, So Try ReConnect
-                    }
-                    catch (Exception ex)
-                    {
-                        string[] lines = ex.StackTrace!.Split('\n');
-                        foreach (string line in lines)
+                        catch (Exception ex)
                         {
-                            LoginServer.LogItemAddTime(line);
+                            LoginServer.LogItemAddTime(ex.Message);
+                            LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
                         }
-                        LoginServer.LogItemAddTime(ex.Message);
-                        LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
+                        await Task.Delay(1000, GateCancel.Token);
                     }
-                    await Task.Delay(1000, GateCancel.Token);
                 }
+            }
+            catch (OperationCanceledException ex)
+            {
+                LoginServer.LogItemAddTime($"GateServer 와 연결이 정상적으로 종료되었습니다. {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                LoginServer.LogItemAddTime(ex.Message);
             }
         }
         public void Cancel()
@@ -251,14 +257,15 @@ namespace LoginServerAdvanced
                 case LOGIN_TO_GATE_PACKET_ID.ID_NEW_USER_TRY_CONNECT:
                     if(Data is LoginToGateServer)
                     {
-                        int PacketSize = Marshal.SizeOf(typeof(LoginToGateServer)) + sizeof(LOGIN_TO_GATE_PACKET_ID);
+                        LoginToGateServer GateData = (Data as LoginToGateServer)!;
+                        byte[] ClassData = SocketDataSerializer.Serialize(GateData);
+                        int PacketSize = ClassData.Length + sizeof(LOGIN_TO_GATE_PACKET_ID);
                         byte[] Packet = new byte[PacketSize + sizeof(int)];
                         byte[] SizeData = BitConverter.GetBytes(PacketSize);
                         byte[] IDData = BitConverter.GetBytes((uint)ID);
-                        byte[] ClassData = SocketDataSerializer.Serialize(Data);
-                        Packet.Concat(SizeData);
-                        Packet.Concat(IDData);
-                        Packet.Concat(ClassData);
+                        Buffer.BlockCopy(SizeData, 0, Packet, 0, SizeData.Length);
+                        Buffer.BlockCopy(IDData, 0, Packet, SizeData.Length, IDData.Length);
+                        Buffer.BlockCopy(ClassData, 0, Packet, SizeData.Length + IDData.Length, ClassData.Length);
                         if (GameConnectSocket != null && GameConnectSocket.Connected)
                             return GameConnectSocket!.Send(Packet);
                         else
