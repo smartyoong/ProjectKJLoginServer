@@ -188,23 +188,39 @@ namespace LoginServerAdvanced
             IPAddress GateAddr = IPAddress.Parse(Settings.Default.GateServerAddr);
             while(!GateCancel!.IsCancellationRequested)
             {
-                try
+                if(GameConnectSocket != null && !GameConnectSocket!.Connected)
                 {
-                    await GameConnectSocket!.ConnectAsync(GateAddr, Settings.Default.GateServerPort);
-                    MainForm!.SetGateServerSuccess(true);
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    string[] lines = ex.StackTrace!.Split('\n');
-                    foreach (string line in lines)
+                    try
                     {
-                        LoginServer.LogItemAddTime(line);
+                        await GameConnectSocket!.ConnectAsync(GateAddr, Settings.Default.GateServerPort);
+                        MainForm!.SetGateServerSuccess(true);
+                        byte[] KeepAlive = new byte[32];
+                        int GateDisconnectCheck = 0;
+                        while(!GateCancel.IsCancellationRequested)
+                        {
+                            GateDisconnectCheck = await GameConnectSocket.ReceiveAsync(KeepAlive);
+                            if (GateDisconnectCheck <= 0)
+                            {
+                                LoginServer.LogItemAddTime("게이트 서버와 연결이 종료되었습니다.");
+                                break;
+                            }
+                        }
+                        GameConnectSocket.Close();
+                        GameConnectSocket = null;
+                        continue; // GateServer Disconnected, So Try ReConnect
                     }
-                    LoginServer.LogItemAddTime(ex.Message);
-                    LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
+                    catch (Exception ex)
+                    {
+                        string[] lines = ex.StackTrace!.Split('\n');
+                        foreach (string line in lines)
+                        {
+                            LoginServer.LogItemAddTime(line);
+                        }
+                        LoginServer.LogItemAddTime(ex.Message);
+                        LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
+                    }
+                    await Task.Delay(1000, GateCancel.Token);
                 }
-                await Task.Delay(1000,GateCancel.Token);
             }
         }
         public void Cancel()
@@ -237,7 +253,16 @@ namespace LoginServerAdvanced
                     {
                         int PacketSize = Marshal.SizeOf(typeof(LoginToGateServer)) + sizeof(LOGIN_TO_GATE_PACKET_ID);
                         byte[] Packet = new byte[PacketSize + sizeof(int)];
-                        GameConnectSocket!.Send(Packet);
+                        byte[] SizeData = BitConverter.GetBytes(PacketSize);
+                        byte[] IDData = BitConverter.GetBytes((uint)ID);
+                        byte[] ClassData = SocketDataSerializer.Serialize(Data);
+                        Packet.Concat(SizeData);
+                        Packet.Concat(IDData);
+                        Packet.Concat(ClassData);
+                        if (GameConnectSocket != null && GameConnectSocket.Connected)
+                            return GameConnectSocket!.Send(Packet);
+                        else
+                            LoginServer.LogItemAddTime("게이트 서버와 연결이 끊어져 데이터를 전송 실패했습니다.");
                     }
                     else
                     {
@@ -245,7 +270,7 @@ namespace LoginServerAdvanced
                     }
                     break;
             }
-            return 0;
+            return -1;
         }
     }
 }

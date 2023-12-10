@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -43,9 +44,10 @@ namespace LoginServerAdvanced
         public int IntegerValue1 { get; set; } = 0;
     }
     [Serializable]
+    [StructLayout(LayoutKind.Sequential)]
     public class LoginToGateServer
     {
-        string UserName = string.Empty;
+        public string UserName = string.Empty;
     }
 
 }

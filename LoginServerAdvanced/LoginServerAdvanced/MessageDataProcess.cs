@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using LoginServerAdvanced.Properties;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -15,6 +16,7 @@ namespace LoginServerAdvanced
             get; 
             set;
         }
+        public LoginCore? Owner { get; set; }
 
         public bool Init(LoginDataBase LoginDB)
         {
@@ -64,6 +66,10 @@ namespace LoginServerAdvanced
                         case LOGIN_CLIENT_PACKET_ID.LOGIN_CLIENT_CHECK_ID_UNIQUE: 
                             Callback_SP_CheckID(TempPacket); 
                             break;
+                        case LOGIN_CLIENT_PACKET_ID.LOGIN_CLIENT_GOTO_GATE:
+                            Callback_GoTo_Gate(TempPacket);
+                            break;
+
                     }
 
                 }
@@ -212,6 +218,20 @@ namespace LoginServerAdvanced
             byte[] DataBytes;
             DataBytes = SocketDataSerializer.Serialize(TempPacket);
             Packet.ResponeSocket?.Send(DataBytes);
+        }
+
+        private void Callback_GoTo_Gate(LoginMessagePacket Packet)
+        {
+            LoginSendToClientMessagePacket? TempPacket = new LoginSendToClientMessagePacket();
+            TempPacket.IDNum = LOGIN_SERVER_PACKET_ID.LOGIN_SERVER_GOTO_GATE_RESULT;
+            TempPacket.StringValue1 = Settings.Default.GateServerAddr;
+            TempPacket.IntegerValue1 = Settings.Default.GateServerPort;
+            byte[] DataBytes;
+            DataBytes = SocketDataSerializer.Serialize(TempPacket);
+            Packet.ResponeSocket?.Send(DataBytes);
+            LoginToGateServer GatePacket = new LoginToGateServer();
+            GatePacket.UserName = Packet.StringValue1;
+            Owner!.SendToGateServer(LOGIN_TO_GATE_PACKET_ID.ID_NEW_USER_TRY_CONNECT,GatePacket);
         }
     }
 }

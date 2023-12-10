@@ -50,6 +50,7 @@ namespace LoginServerAdvanced
                 MessageBox.Show("서버 초기화 실패","서버 초기화 실패",MessageBoxButtons.OK, MessageBoxIcon.Error);
             IsServerRun = true;
             PacketProccessor.MainForm = this.MainForm;
+            PacketProccessor.Owner = this;
             LoginSock.MainForm = this.MainForm;
             GameSock.MainForm = this.MainForm;
             MainForm!.SetDBConnectSucces(true);
@@ -150,6 +151,10 @@ namespace LoginServerAdvanced
             {
                 return 1;
             }
+        }
+        public void SendToGateServer(LOGIN_TO_GATE_PACKET_ID ID ,LoginToGateServer Packet)
+        {
+            GameSock!.SendToGateServer(ID, Packet);
         }
     }
 }
