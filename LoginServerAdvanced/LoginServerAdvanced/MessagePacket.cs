@@ -42,5 +42,10 @@ namespace LoginServerAdvanced
         public string StringValue2 { get; set; } = string.Empty;
         public int IntegerValue1 { get; set; } = 0;
     }
+    [Serializable]
+    public class LoginToGateServer
+    {
+        string UserName = string.Empty;
+    }
 
 }

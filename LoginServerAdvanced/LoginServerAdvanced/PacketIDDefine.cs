@@ -31,4 +31,8 @@ namespace LoginServerAdvanced
         SP_REGIST_ACCOUNT = 1,
         SP_ID_UNIQUE_CHECK = 2
     }
+    public enum LOGIN_TO_GATE_PACKET_ID : uint
+    {
+        ID_NEW_USER_TRY_CONNECT = 0
+    }
 }

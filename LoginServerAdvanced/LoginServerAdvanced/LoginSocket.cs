@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using LoginServerAdvanced.Properties;
 
 namespace LoginServerAdvanced
@@ -225,6 +226,26 @@ namespace LoginServerAdvanced
             GameConnectSocket?.Close();
             GateCancel?.Dispose();
             Disposed = true;
+        }
+
+        public int SendToGateServer(LOGIN_TO_GATE_PACKET_ID ID, object Data)
+        {
+            switch(ID)
+            {
+                case LOGIN_TO_GATE_PACKET_ID.ID_NEW_USER_TRY_CONNECT:
+                    if(Data is LoginToGateServer)
+                    {
+                        int PacketSize = Marshal.SizeOf(typeof(LoginToGateServer)) + sizeof(LOGIN_TO_GATE_PACKET_ID);
+                        byte[] Packet = new byte[PacketSize + sizeof(int)];
+                        GameConnectSocket!.Send(Packet);
+                    }
+                    else
+                    {
+                        LoginServer.LogItemAddTime($"{ID}의 Data가  LoginToGateServer형태로 변환 불가능합니다");
+                    }
+                    break;
+            }
+            return 0;
         }
     }
 }
