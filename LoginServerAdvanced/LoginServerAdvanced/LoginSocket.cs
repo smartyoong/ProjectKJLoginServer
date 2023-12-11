@@ -1,7 +1,6 @@
-﻿using System.Net;
+﻿using LoginServerAdvanced.Properties;
+using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using LoginServerAdvanced.Properties;
 
 namespace LoginServerAdvanced
 {
@@ -23,7 +22,7 @@ namespace LoginServerAdvanced
                 PacketQueue = PacketQueuClass;
                 return true;
             }
-            catch(SocketException ex) 
+            catch (SocketException ex)
             {
                 string[] lines = ex.StackTrace!.Split('\n');
                 foreach (string line in lines)
@@ -43,7 +42,7 @@ namespace LoginServerAdvanced
                 {
                     if (ListenSocket == null) return;
                     Socket ClientSocket = await ListenSocket.AcceptAsync(CancelSocketCancel.Token);
-                    if(MainForm != null)
+                    if (MainForm != null)
                         MainForm.IncreaseUserCount();
                     SocketTasks.Add(Task.Run(() => RecvData(ClientSocket), CancelSocketCancel.Token));
                 }
@@ -84,7 +83,7 @@ namespace LoginServerAdvanced
                 if (CancelSocketCancel == null) return;
                 while (!CancelSocketCancel.Token.IsCancellationRequested)
                 {
-                    int ReceivedLength = await Sock.ReceiveAsync(buffer, SocketFlags.None,CancelSocketCancel.Token);
+                    int ReceivedLength = await Sock.ReceiveAsync(buffer, SocketFlags.None, CancelSocketCancel.Token);
                     if (ReceivedLength <= 0)
                     {
                         return;
@@ -92,9 +91,9 @@ namespace LoginServerAdvanced
                     PacketQueue!.BufferToMessageQueue(ref buffer, Sock);
                 }
             }
-            catch(SocketException ex)
+            catch (SocketException ex)
             {
-                if(ex.SocketErrorCode == SocketError.ConnectionAborted || ex.SocketErrorCode == SocketError.ConnectionReset || ex.SocketErrorCode == SocketError.Shutdown)
+                if (ex.SocketErrorCode == SocketError.ConnectionAborted || ex.SocketErrorCode == SocketError.ConnectionReset || ex.SocketErrorCode == SocketError.Shutdown)
                 {
                     IPEndPoint? RemoteEndPoint = Sock.RemoteEndPoint as IPEndPoint;
                     if (RemoteEndPoint != null)
@@ -103,11 +102,11 @@ namespace LoginServerAdvanced
                     }
                 }
             }
-            catch(OperationCanceledException ex)
+            catch (OperationCanceledException ex)
             {
                 LoginServer.LogItemAddTime($"RecvData가 정상적으로 종료되었습니다. {ex.Message}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 string[] lines = ex.StackTrace!.Split('\n');
                 foreach (string line in lines)
@@ -121,7 +120,7 @@ namespace LoginServerAdvanced
                 IPEndPoint? RemoteEndPoint = Sock.RemoteEndPoint as IPEndPoint;
                 if (RemoteEndPoint != null)
                 {
-                    if(string.IsNullOrEmpty(LoginCore.FindNickNameBySocket(Sock)))
+                    if (string.IsNullOrEmpty(LoginCore.FindNickNameBySocket(Sock)))
                         LoginServer.LogItemAddTime($"{LoginCore.FindNickNameBySocket(Sock)} {RemoteEndPoint.Address} 님이 연결 종료 하였습니다");
                     else
                         LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} (로그인 혹은 회원가입하지 않음) 님이 연결 종료 하였습니다");
@@ -146,7 +145,7 @@ namespace LoginServerAdvanced
             if (IsDisposing)
             {
                 CancelSocketCancel!.Dispose();
-                for(int i = 0;i< SocketTasks.Count;i++) 
+                for (int i = 0; i < SocketTasks.Count; i++)
                 {
                     SocketTasks[i].Dispose();
                 }
@@ -172,7 +171,7 @@ namespace LoginServerAdvanced
                 GameConnectSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 return true;
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 string[] lines = ex.StackTrace!.Split('\n');
                 foreach (string line in lines)
@@ -252,24 +251,26 @@ namespace LoginServerAdvanced
 
         public int SendToGateServer(LOGIN_TO_GATE_PACKET_ID ID, object Data)
         {
-            switch(ID)
+            switch (ID)
             {
                 case LOGIN_TO_GATE_PACKET_ID.ID_NEW_USER_TRY_CONNECT:
-                    if(Data is LoginToGateServer)
+                    if (Data is LoginToGateServer)
                     {
                         LoginToGateServer GateData = (Data as LoginToGateServer)!;
-                        byte[] ClassData = SocketDataSerializer.Serialize(GateData);
+                        byte[] ClassData;
+                        ClassData = SocketDataSerializer.Serialize(GateData);
                         int PacketSize = ClassData.Length + sizeof(LOGIN_TO_GATE_PACKET_ID);
                         byte[] Packet = new byte[PacketSize + sizeof(int)];
                         byte[] SizeData = BitConverter.GetBytes(PacketSize);
                         byte[] IDData = BitConverter.GetBytes((uint)ID);
                         Buffer.BlockCopy(SizeData, 0, Packet, 0, SizeData.Length);
                         Buffer.BlockCopy(IDData, 0, Packet, SizeData.Length, IDData.Length);
-                        Buffer.BlockCopy(ClassData, 0, Packet, SizeData.Length + IDData.Length, ClassData.Length);
+                        Buffer.BlockCopy(ClassData, 0, Packet, (SizeData.Length + IDData.Length), ClassData.Length);
                         if (GameConnectSocket != null && GameConnectSocket.Connected)
                             return GameConnectSocket!.Send(Packet);
                         else
                             LoginServer.LogItemAddTime("게이트 서버와 연결이 끊어져 데이터를 전송 실패했습니다.");
+                        //LoginToGateServer GateData = (LoginToGateServer)Data;
                     }
                     else
                     {
