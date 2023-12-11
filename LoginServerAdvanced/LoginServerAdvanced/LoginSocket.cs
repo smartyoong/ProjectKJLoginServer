@@ -203,17 +203,33 @@ namespace LoginServerAdvanced
                                 if (GateDisconnectCheck <= 0)
                                 {
                                     LoginServer.LogItemAddTime("게이트 서버와 연결이 종료되었습니다.");
+                                    GameConnectSocket.Close();
                                     break;
                                 }
                             }
-                            GameConnectSocket.Close();
-                            GameConnectSocket = null;
                             continue; // GateServer Disconnected, So Try ReConnect
+                        }
+                        catch (SocketException ex)
+                        {
+                            if (ex.SocketErrorCode == SocketError.ConnectionReset)
+                            {
+                                LoginServer.LogItemAddTime(ex.Message);
+                                LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
+                                GameConnectSocket?.Close();
+                                GameConnectSocket = null;
+                                GameConnectSocket = new Socket(AddressFamily.InterNetwork,SocketType.Stream, ProtocolType.Tcp);
+                                MainForm!.SetGateServerSuccess(false);
+                            }
+                            else
+                            {
+                                LoginServer.LogItemAddTime(ex.Message);
+                                LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
+                            }
                         }
                         catch (Exception ex)
                         {
                             LoginServer.LogItemAddTime(ex.Message);
-                            LoginServer.LogItemAddTime("게이트 서버와 재연결 중");
+                            LoginServer.LogItemAddTime("게이트 서버와 재연결 중, 소켓 에러가 아님");
                         }
                         await Task.Delay(1000, GateCancel.Token);
                     }
@@ -271,6 +287,10 @@ namespace LoginServerAdvanced
                         else
                             LoginServer.LogItemAddTime("게이트 서버와 연결이 끊어져 데이터를 전송 실패했습니다.");
                         //LoginToGateServer GateData = (LoginToGateServer)Data;
+                        // 그동안 as로 형식연역할때는 안되다가,,,, 위의 주석 코드로 한번 직접 변환 이후로는
+                        // as문을 사용해도 제대로 작동한다. 아무래도 VM이 형식연역을 제대로 못해 <T>Serialize 에서 변수가 이상하게 할당된듯하다.
+                        // Debug나 VS상으로도 제대로 연역된것 처럼 나오는데, 런타임에서는 제대로 못돌아갔다가 이제는 제대로 되는걸 보면,
+                        // C#이 컴파일 속도를 빠르게하기 위해 이미 빌드 시켜둔걸 재활용하는데, 이미 기존에 이상하게 빌드가 되어있던걸 계속 재활용해서 못잡은게 아닐까 싶다
                     }
                     else
                     {
