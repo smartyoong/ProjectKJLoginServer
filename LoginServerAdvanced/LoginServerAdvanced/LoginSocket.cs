@@ -229,6 +229,10 @@ namespace LoginServerAdvanced
                         catch (Exception ex)
                         {
                             LoginServer.LogItemAddTime(ex.Message);
+                            GameConnectSocket?.Close();
+                            GameConnectSocket = null;
+                            GameConnectSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                            MainForm!.SetGateServerSuccess(false);
                             LoginServer.LogItemAddTime("게이트 서버와 재연결 중, 소켓 에러가 아님");
                         }
                         await Task.Delay(1000, GateCancel.Token);
