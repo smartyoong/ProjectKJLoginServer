@@ -134,7 +134,7 @@ namespace LoginServerAdvanced
                 string FolderPath = FolderBrowserDialog.SelectedPath;
                 DateTime CurrentTime = DateTime.Now;
                 string FormattedTime = CurrentTime.ToString("yyyy-MM-dd-HH-mm-ss");
-                LogFilePath = Path.Combine(FolderPath, $"LOG{FormattedTime}.txt");
+                LogFilePath = Path.Combine(FolderPath, $"LoginServerLog{FormattedTime}.txt");
                 if (!File.Exists(LogFilePath))
                 {
                     File.Create(LogFilePath).Close();
@@ -161,7 +161,7 @@ namespace LoginServerAdvanced
                 Directory.CreateDirectory(LogDirectory);
             }
 
-            LogFilePath = Path.Combine(LogDirectory, $"LOG{FormattedTime}.txt");
+            LogFilePath = Path.Combine(LogDirectory, $"LoginServerLog{FormattedTime}.txt");
             if (!File.Exists(LogFilePath))
             {
                 File.Create(LogFilePath).Close();
