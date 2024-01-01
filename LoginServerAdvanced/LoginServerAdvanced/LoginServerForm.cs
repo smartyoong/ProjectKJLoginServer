@@ -57,7 +57,10 @@ namespace LoginServerAdvanced
                 LoginServerLogList.Invoke(new Action<string>(LogItemAddTime), LogContext);
             }
             else
+            {
                 LoginServerLogList.Items.Add(Temp);
+                LoginServerLogList.SelectedIndex = LoginServerLogList.Items.Count - 1;
+            }
             LogFileStream!.WriteLine(Temp);
             LogFileStream.Flush();
         }
