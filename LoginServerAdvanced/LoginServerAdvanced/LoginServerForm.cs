@@ -145,7 +145,7 @@ namespace LoginServerAdvanced
                     }
                     LogFileStream = new StreamWriter(LogFilePath, true);
                 }
-                Settings.Default.LogDirectory = LogFilePath;
+                Settings.Default.LogDirectory = FolderPath;
                 Settings.Default.Save();
             }
         }
@@ -175,7 +175,9 @@ namespace LoginServerAdvanced
         }
         private void UseDefaultLogDirectory()
         {
-            LogFilePath = Settings.Default.LogDirectory;
+            DateTime CurrentTime = DateTime.Now;
+            string FormattedTime = CurrentTime.ToString("yyyy-MM-dd-HH-mm-ss");
+            LogFilePath = Path.Combine(Settings.Default.LogDirectory, $"LoginServerLog{FormattedTime}.txt");
             if (!File.Exists(LogFilePath))
             {
                 File.Create(LogFilePath).Close();
