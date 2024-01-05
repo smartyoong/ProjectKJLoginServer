@@ -11,7 +11,7 @@ namespace LoginServerAdvanced
 {
     public class LoginCore
     {
-        private static Dictionary<string, Socket>? LoginUsers = new Dictionary<string, Socket>(); // <닉네임,소켓>
+        private static Dictionary<string, Socket> LoginUsers = new Dictionary<string, Socket>(); // <닉네임,소켓>
         private bool IsServerRun = false;
         LoginDataBase? LoginDB;
         GameGateSocket? GameSock;
@@ -93,6 +93,10 @@ namespace LoginServerAdvanced
                     LoginServer.LogItemAddTime("LoginCore.Run 정상적으로 종료되었습니다.");
                 }
             }
+            finally
+            {
+                LoginUsers.Clear();
+            }
         }
 
         public void ShutDownServerCore()
@@ -154,7 +158,8 @@ namespace LoginServerAdvanced
         }
         public void SendToGateServer(LOGIN_TO_GATE_PACKET_ID ID ,LoginToGateServer Packet)
         {
-            GameSock!.SendToGateServer(ID, Packet);
+            int SendData = GameSock!.SendToGateServer(ID, Packet);
+            LoginServer.LogItemAddTime($"{SendData} byte 게이트 서버에 전송함");
         }
     }
 }

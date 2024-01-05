@@ -96,7 +96,12 @@ namespace LoginServerAdvanced
                 if (ex.SocketErrorCode == SocketError.ConnectionAborted || ex.SocketErrorCode == SocketError.ConnectionReset || ex.SocketErrorCode == SocketError.Shutdown)
                 {
                     IPEndPoint? RemoteEndPoint = Sock.RemoteEndPoint as IPEndPoint;
-                    if (RemoteEndPoint != null)
+                    string DisconnectedUserName = LoginCore.FindNickNameBySocket(Sock);
+                    if (DisconnectedUserName != string.Empty)
+                    {
+                        LoginServer.LogItemAddTime($"{DisconnectedUserName} 유저가 연결을 끊었습니다.");
+                    }
+                    else if (RemoteEndPoint != null)
                     {
                         LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} 유저가 연결을 끊었습니다.");
                     }
@@ -121,9 +126,12 @@ namespace LoginServerAdvanced
                 if (RemoteEndPoint != null)
                 {
                     if (!string.IsNullOrEmpty(LoginCore.FindNickNameBySocket(Sock)))
+                    {
                         LoginServer.LogItemAddTime($"{LoginCore.FindNickNameBySocket(Sock)} {RemoteEndPoint.Address} 님이 연결 종료 하였습니다");
+                        LoginCore.DeleteUserOnDictionary(LoginCore.FindNickNameBySocket(Sock));
+                    }
                     else
-                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} (로그인 혹은 회원가입하지 않음) 님이 연결 종료 하였습니다");
+                        LoginServer.LogItemAddTime($"{RemoteEndPoint.Address} 님이 연결 종료 하였습니다");
                 }
                 if (MainForm != null)
                     MainForm.DecreaseUserCount();
@@ -287,14 +295,17 @@ namespace LoginServerAdvanced
                         Buffer.BlockCopy(IDData, 0, Packet, SizeData.Length, IDData.Length);
                         Buffer.BlockCopy(ClassData, 0, Packet, (SizeData.Length + IDData.Length), ClassData.Length);
                         if (GameConnectSocket != null && GameConnectSocket.Connected)
-                            return GameConnectSocket!.Send(Packet);
+                        {
+                            lock(GameConnectSocket)
+                            {
+                                return GameConnectSocket!.Send(Packet);
+                            }
+                        }
                         else
                             LoginServer.LogItemAddTime("게이트 서버와 연결이 끊어져 데이터를 전송 실패했습니다.");
-                        //LoginToGateServer GateData = (LoginToGateServer)Data;
-                        // 그동안 as로 형식연역할때는 안되다가,,,, 위의 주석 코드로 한번 직접 변환 이후로는
-                        // as문을 사용해도 제대로 작동한다. 아무래도 VM이 형식연역을 제대로 못해 <T>Serialize 에서 변수가 이상하게 할당된듯하다.
-                        // Debug나 VS상으로도 제대로 연역된것 처럼 나오는데, 런타임에서는 제대로 못돌아갔다가 이제는 제대로 되는걸 보면,
-                        // C#이 컴파일 속도를 빠르게하기 위해 이미 빌드 시켜둔걸 재활용하는데, 이미 기존에 이상하게 빌드가 되어있던걸 계속 재활용해서 못잡은게 아닐까 싶다
+                        // 종종 데이터를 제대로 전송했는데 수신측에서 데이터 크기는 0 이상인데도 불구하고 데이터가 전송이안되는 현상이 존재한다
+                        // 이게 다른곳에서도 발생하면 모르겠는데 게이트 서버 <-> 로그인 서버와 통신시에만 간헐적으로 발생한다
+                        // 닷넷 7.0과 닷넷 8.0에서 호환성 문제인가 싶기도해서 일단 버전업을 시켜본다.
                     }
                     else
                     {
